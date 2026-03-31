@@ -2,13 +2,10 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
-
 venv/
 .env
-
 .vscode/
-
 .DS_Store
 Thumbs.db
-
 postgres_data/
+docker-compose.override.yml

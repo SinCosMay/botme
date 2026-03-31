@@ -1,6 +1,8 @@
-# BotMe: Codeforces Practice Tracker
+# BotMe: Codeforces Practice Tracker (+ Optional LeetCode Company-Wise Track)
 
 A full-stack project where users solve Codeforces problems through Discord, and your system verifies solves, awards XP, updates rating/streak, and visualizes progress on a web dashboard.
+
+Extension supported: users can also practice LeetCode company-wise questions as a separate track for preparation and analytics.
 
 This README is a practical implementation guide and a living roadmap. We will execute it phase-by-phase and keep it updated.
 
@@ -10,6 +12,10 @@ Build a production-style learning system with three layers:
 - Discord Bot: interaction layer (commands, prompts, reminders)
 - Backend Server: core logic (verification, XP, rating, analytics)
 - Web Dashboard: visualization (profile, graphs, leaderboard)
+
+Platform scope:
+- Primary competitive track: Codeforces (verified, score-impacting) with random, topic-wise, and rating-wise assignment
+- Optional interview track: LeetCode company-wise only (separate progress counters by default)
 
 What this demonstrates on a resume:
 - Backend architecture and API design
@@ -37,8 +43,27 @@ botme/
 Current notes:
 - Docker services exist for Postgres and Redis in `docker-compose.yml`.
 - `backend/app/main.py` currently contains sample CRUD logic (campaign demo), not final project domain logic.
+- `backend/app/core/config.py` and `backend/app/core/database.py` exist for env-based DB setup.
+- Alembic scaffolding and first migration are present in `backend/alembic/`.
+- Baseline SQLAlchemy models exist in `backend/app/models/user.py` and `backend/app/models/problem.py`.
 
-## 3) System Architecture (Target)
+## 3) Current Progress Snapshot (As Of 2026-04-01)
+
+Completed now:
+- [x] Added `.env.example` for backend runtime configuration.
+- [x] Added `Settings` loader via `pydantic-settings`.
+- [x] Added SQLAlchemy engine/session/base module.
+- [x] Added initial domain models (`users`, `problems`).
+- [x] Added Alembic setup and created initial migration.
+- [x] Added campaign list pagination support in demo API.
+
+Not completed yet:
+- [ ] Replace campaign demo endpoints with project domain endpoints.
+- [ ] Switch FastAPI app runtime to Postgres + Redis-backed domain services.
+- [ ] Implement Codeforces assignment/verification APIs.
+- [ ] Integrate Discord bot command handlers with backend domain routes.
+
+## 4) System Architecture (Target)
 
 ```text
 Discord User
@@ -61,7 +86,12 @@ Backend API (FastAPI)
 Web Dashboard (Next.js/React) <---- Backend API
 ```
 
-## 4) End-to-End User Flow (Implemented Behavior)
+Additional data source for interview prep:
+- GitHub dataset for LeetCode company-wise mapping:
+  - https://github.com/liquidslr/leetcode-company-wise-problems
+  - Use as metadata source (company -> problem slug/title/url/tags/difficulty)
+
+## 5) End-to-End User Flow (Target Behavior)
 
 1. User joins via Discord command.
 2. Bot links Discord ID to Codeforces handle.
@@ -75,7 +105,14 @@ Web Dashboard (Next.js/React) <---- Backend API
 10. User views profile in bot or web dashboard.
 11. Background jobs keep challenges, streaks, and leaderboard fresh.
 
-## 5) Domain Model (MVP Tables)
+Optional LeetCode flow (separate track):
+1. User asks for company-wise practice (example: Google medium).
+2. System selects LeetCode problem from imported company-wise dataset.
+3. User marks it solved.
+4. System records solve in LeetCode track counters.
+5. By default, this does not change Codeforces XP/rating/streak.
+
+## 6) Domain Model (MVP Tables)
 
 Use Postgres for persistence.
 
@@ -93,14 +130,19 @@ Use Postgres for persistence.
 
 - problems
   - id (uuid, pk)
+  - platform (enum: codeforces, leetcode)
   - cf_contest_id (int)
   - cf_index (text)
+  - lc_problem_id (text, nullable)
+  - lc_slug (text, nullable)
   - name (text)
   - rating (int, nullable)
   - tags (jsonb)
   - url (text)
+  - companies (jsonb, nullable)
   - source_last_seen_at (timestamptz)
-  - unique (cf_contest_id, cf_index)
+  - unique (platform, cf_contest_id, cf_index)
+  - unique (platform, lc_slug)
 
 - assignments
   - id (uuid, pk)
@@ -113,11 +155,24 @@ Use Postgres for persistence.
   - id (uuid, pk)
   - user_id (fk users)
   - problem_id (fk problems)
+  - platform (enum: codeforces, leetcode)
   - cf_submission_id (bigint, unique)
+  - proof_url (text, nullable)
   - verdict (text)
   - solved_at (timestamptz)
   - xp_awarded (int)
   - bonus_xp_awarded (int, default 0)
+  - unique (user_id, problem_id)
+
+- user_platform_stats (recommended)
+  - user_id (fk users)
+  - platform (enum: codeforces, leetcode)
+  - solved_count (int, default 0)
+  - streak (int, default 0)
+  - last_solved_at (timestamptz, nullable)
+  - xp (int, default 0)
+  - rating (int, nullable)
+  - primary key (user_id, platform)
 
 - followup_questions
   - id (uuid, pk)
@@ -158,7 +213,7 @@ Use Postgres for persistence.
   - xp_gained (int)
   - primary key (day, user_id)
 
-## 6) Core Formulas (Initial Version)
+## 7) Core Formulas (Initial Version)
 
 Keep formulas simple first, then tune.
 
@@ -184,7 +239,12 @@ Streak:
 - Increment if solved on consecutive UTC dates
 - Reset to 0 when a day is missed (handled by daily job)
 
-## 7) API Surface (MVP)
+LeetCode track default policy:
+- LeetCode solved count contributes to LeetCode analytics only.
+- Codeforces XP/rating/streak remain unchanged.
+- Optional flag later: enable global XP for LeetCode with reduced weights.
+
+## 8) API Surface (MVP)
 
 Backend routes (suggested):
 - `POST /v1/users/register` -> map Discord ID to CF handle
@@ -195,27 +255,48 @@ Backend routes (suggested):
 - `GET /v1/leaderboard?metric=xp|rating&limit=50`
 - `GET /v1/analytics/{user_id}` -> charts payload
 
+LeetCode company-wise routes (new):
+- `POST /v1/leetcode/import/company-problems` -> import/update dataset
+- `POST /v1/problems/assign/leetcode` -> assign by company (optional difficulty filter)
+- `POST /v1/submissions/leetcode/mark-solved` -> record solved (self-report mode)
+- `GET /v1/analytics/{user_id}?platform=leetcode` -> LC-only analytics
+
 Codeforces integration routes/services:
 - pull + sync problemset metadata
 - fetch submissions by CF handle
 - verify `OK` verdict for contest+index after assignment timestamp
 
-## 8) Discord Bot Commands (MVP)
+LeetCode integration note:
+- No official public LeetCode API equivalent to CF verification.
+- Implement V1 as tracked practice mode:
+  - self-reported solved events + duplicate protection
+  - optional proof URL (submission screenshot or profile link)
+  - optional review queue for strict mode
+
+## 9) Discord Bot Commands (MVP)
 
 - `/register <cf_handle>`
-- `/problem [rating] [tag]`
+- `/problem random`
+- `/problem topic <tag>`
+- `/problem rating <min_rating> <max_rating>`
 - `/solved` (verifies latest active assignment)
 - `/profile`
 - `/leaderboard`
 - `/streak`
 - `/help`
 
+LeetCode company-wise commands (new):
+- `/lc_company <company> [difficulty]`
+- `/lc_solved`
+- `/lc_profile`
+
 Bot behavior:
 - On `/solved`, verify solve before rewards.
 - If accepted, immediately trigger follow-up question.
 - For retries/invalid solves, return clear reason.
+- For `/lc_solved`, record solve in LeetCode track (no CF score impact by default).
 
-## 9) Web Dashboard (MVP Pages)
+## 10) Web Dashboard (MVP Pages)
 
 - `/profile/:handle`
   - XP, rating, level, streak, solved count
@@ -227,10 +308,15 @@ Bot behavior:
   - rank by XP/rating
   - user comparison cards
 
+- `/leetcode`
+  - company-wise solved progress
+  - difficulty split
+  - top companies practiced
+
 - `/challenges` (optional V2)
   - daily challenge and status
 
-## 10) Caching + Background Jobs
+## 11) Caching + Background Jobs
 
 Redis usage:
 - cache Codeforces problemset (TTL 6h)
@@ -241,12 +327,13 @@ Background jobs:
 - daily at 00:05 UTC: streak reset checks + daily challenge generation
 - every 10 min: leaderboard materialized refresh/cache warm
 - every 6h: Codeforces problemset sync
+- daily/weekly: refresh LeetCode company-wise dataset snapshot
 
 Suggested tooling:
 - Celery/RQ/Arq + Redis queue
 - APScheduler for simple scheduler start (if avoiding full worker initially)
 
-## 11) Implementation Phases (Build Order)
+## 12) Implementation Phases (Build Order)
 
 ### Phase 0 - Foundation and Cleanup
 Goal: establish project baseline and remove demo code.
@@ -270,12 +357,25 @@ Tasks:
 - Implement user registration (Discord ID <-> CF handle).
 - Implement Codeforces handle verification.
 - Build problemset sync service from Codeforces API.
-- Implement problem filtering and random assignment.
+- Implement problem assignment modes: random, topic-wise, rating-wise.
 - Persist assignments.
 
 Exit criteria:
 - `/register` and `/problem` bot commands work with backend.
 - Assigned problem stored and retrievable.
+
+### Phase 1.5 - LeetCode Company-Wise Dataset + Separate Track
+Goal: add interview-practice track without disturbing CF scoring logic.
+
+Tasks:
+- Build importer from the GitHub company-wise dataset into `problems` where platform=leetcode.
+- Add company-wise assignment for LeetCode (optional difficulty filter only).
+- Add `user_platform_stats` and LeetCode solve recording endpoint.
+- Keep XP/rating impact disabled for LeetCode by default.
+
+Exit criteria:
+- `/lc_company` and `/lc_solved` work end-to-end.
+- LeetCode solves appear in analytics but CF XP/rating do not change.
 
 ### Phase 2 - Solve Verification + Progress Engine
 Goal: core logic correctness.
@@ -342,11 +442,12 @@ Exit criteria:
 - Stable end-to-end demo for portfolio.
 - Readme and architecture docs updated.
 
-## 12) Learning Plan (Resume-Oriented)
+## 13) Learning Plan (Resume-Oriented)
 
 Target skills by phase:
 - Phase 0: FastAPI architecture, config patterns, migrations
 - Phase 1: external API integration + data modeling
+- Phase 1.5: dataset ingestion pipelines + multi-platform domain design
 - Phase 2: domain logic correctness + idempotency
 - Phase 3: product thinking (learning loop design)
 - Phase 4: analytics modeling + cache strategy
@@ -358,14 +459,15 @@ How to show learning in commits:
 - include tests for every core logic unit
 - document tradeoffs in PR/commit notes
 
-## 13) Progress Tracker (Update This Weekly)
+## 14) Progress Tracker (Update This Weekly)
 
 Use this section as the single source of truth.
 
 ### Status Board
 
-- [ ] Phase 0 complete
+- [~] Phase 0 in progress
 - [ ] Phase 1 complete
+- [ ] Phase 1.5 complete
 - [ ] Phase 2 complete
 - [ ] Phase 3 complete
 - [ ] Phase 4 complete
@@ -380,27 +482,29 @@ Use this section as the single source of truth.
 
 Planned tasks:
 - [ ] Replace backend campaign demo with domain skeleton
-- [ ] Add SQLAlchemy models for users/problems/submissions
-- [ ] Add Alembic setup and first migration
+- [~] Add SQLAlchemy models for users/problems/submissions
+- [x] Add Alembic setup and first migration
 - [ ] Add basic health + readiness endpoints
-- [ ] Add env config and `.env.example`
+- [x] Add env config and `.env.example`
 
 ### Changelog
 
 - 2026-04-01: Initial roadmap README created.
+- 2026-04-01: Added Phase 0 progress snapshot and updated tracker to reflect current codebase status.
 
-## 14) Suggested Milestone Branch Strategy
+## 15) Suggested Milestone Branch Strategy
 
 - `main`: stable milestones only
 - `phase-0-foundation`
 - `phase-1-integration`
+- `phase-1.5-lc-company-track`
 - `phase-2-progress-engine`
 - `phase-3-followup`
 - `phase-4-analytics`
 - `phase-5-dashboard`
 - `phase-6-prod-readiness`
 
-## 15) Immediate Next Step (What We Should Build Next)
+## 16) Immediate Next Step (What We Should Build Next)
 
 Start with Phase 0 in this order:
 1. Replace backend demo (`campaign`) with domain modules (`users`, `problems`, `submissions`, `progress`).
@@ -408,4 +512,4 @@ Start with Phase 0 in this order:
 3. Add migrations.
 4. Add basic tests for registration and assignment services.
 
-Once Phase 0 is done, we move to Phase 1 and keep this README updated after each milestone.
+Once Phase 0 is done, we move to Phase 1, then Phase 1.5 (LeetCode company-wise track), and keep this README updated after each milestone.

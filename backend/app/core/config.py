@@ -1,4 +1,5 @@
 from pathlib import Path
+from urllib.parse import quote_plus
 
 from pydantic_settings import BaseSettings
 from pydantic_settings import SettingsConfigDict
@@ -14,7 +15,7 @@ class Settings(BaseSettings):
     API_URL: str = "http://localhost:8000"
 
     POSTGRES_USER: str = "postgres"
-    POSTGRES_PASSWORD: str = "postgres"
+    POSTGRES_PASSWORD: str = "change_me"
     POSTGRES_DB: str = "botme"
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: int = 5432
@@ -30,8 +31,10 @@ class Settings(BaseSettings):
     def database_url(self) -> str:
         if self.DATABASE_URL:
             return self.DATABASE_URL
+        user = quote_plus(self.POSTGRES_USER)
+        password = quote_plus(self.POSTGRES_PASSWORD)
         return (
-            f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
+            f"postgresql://{user}:{password}"
             f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         )
 
