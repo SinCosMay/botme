@@ -1,15 +1,11 @@
-from fastapi import FastAPI
-from datetime import datetime,timezone
-from typing import Any
-from fastapi import HTTPException
-from fastapi import Response
-import random   
-from pydantic import BaseModel
-from sqlalchemy import create_engine ,select,Column, Integer, String, DateTime
-from sqlalchemy.orm import sessionmaker, declarative_base, Session
-from fastapi import Depends
-from typing import Annotated
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
+from typing import Annotated
+
+from fastapi import Depends, FastAPI, HTTPException, Query, Response
+from pydantic import BaseModel
+from sqlalchemy import Column, DateTime, Integer, String, create_engine, select
+from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 
 Base = declarative_base()
@@ -79,14 +75,25 @@ class CampaignCreate(BaseModel):
 
 
 @app.get("/campaigns", response_model=list[CampaignRead])
-async def read_campaign(db: SessionDep):
-    data = db.execute(select(Campaign)).scalars().all()
+async def read_campaign(
+    db: SessionDep,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+):
+    limit = page_size
+    offset = (page - 1) * limit
+    data = db.execute(
+        select(Campaign)
+        .order_by(Campaign.campaign_id)
+        .offset(offset)
+        .limit(limit)
+    ).scalars().all()
     return data
 
 
 @app.get("/campaigns/{id}", response_model=CampaignRead)
 async def get_campaign(id: int, db: SessionDep):
-    data = db.get(Campaign,id)
+    data = db.get(Campaign, id)
     if not data:
         raise HTTPException(status_code=404, detail="Campaign not found")
     return data
@@ -106,12 +113,11 @@ async def create_campaign(body: CampaignCreate, db: SessionDep):
 
 
 
-
-@app.put("/campaign",status_code=200,response_model=CampaignRead)
-async def update_campaign(id: int,body: CampaignCreate,db:SessionDep):
-    data = db.get(Campaign,id) 
+@app.put("/campaigns/{id}", status_code=200, response_model=CampaignRead)
+async def update_campaign(id: int, body: CampaignCreate, db: SessionDep):
+    data = db.get(Campaign, id)
     if not data:
-        raise HTTPException(status_code=404) 
+        raise HTTPException(status_code=404, detail="Campaign not found")
     data.name = body.name
     data.due_date = body.due_date
     db.commit()
@@ -119,11 +125,11 @@ async def update_campaign(id: int,body: CampaignCreate,db:SessionDep):
     return data
 
 
-@app.delete("/campaign",status_code=204)
-async def delete_campaign(id: int,db:SessionDep):
-    data=db.get(Campaign,id)
+@app.delete("/campaigns/{id}", status_code=204)
+async def delete_campaign(id: int, db: SessionDep):
+    data = db.get(Campaign, id)
     if not data:
-        raise HTTPException(status_code=404)
+        raise HTTPException(status_code=404, detail="Campaign not found")
     db.delete(data)
     db.commit()
     return Response(status_code=204)
