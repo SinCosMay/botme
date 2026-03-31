@@ -1,16 +1,38 @@
+from pathlib import Path
+
 from pydantic_settings import BaseSettings
 from pydantic_settings import SettingsConfigDict
 
+
+ROOT_DIR = Path(__file__).resolve().parents[3]
+BACKEND_DIR = ROOT_DIR / "backend"
+
 class Settings(BaseSettings):
-    DATABASE_URL: str
-    REDIS_URL: str
-    DISCORD_TOKEN: str
-    API_URL: str
+    DATABASE_URL: str | None = None
+    REDIS_URL: str = "redis://localhost:6379"
+    DISCORD_TOKEN: str = ""
+    API_URL: str = "http://localhost:8000"
+
+    POSTGRES_USER: str = "postgres"
+    POSTGRES_PASSWORD: str = "postgres"
+    POSTGRES_DB: str = "botme"
+    POSTGRES_HOST: str = "localhost"
+    POSTGRES_PORT: int = 5432
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(ROOT_DIR / ".env", BACKEND_DIR / ".env"),
+        env_file_encoding="utf-8",
         case_sensitive=True,
         extra="ignore",
     )
+
+    @property
+    def database_url(self) -> str:
+        if self.DATABASE_URL:
+            return self.DATABASE_URL
+        return (
+            f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
+            f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        )
 
 settings = Settings()
