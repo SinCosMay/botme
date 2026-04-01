@@ -78,3 +78,13 @@ def test_phase4_timeseries_returns_points(client):
     rating_payload = rating_series.json()
     assert rating_payload["metric"] == "rating"
     assert len(rating_payload["points"]) >= 1
+
+
+def test_phase4_analytics_validation_errors(client):
+    user_id, _ = _seed_phase4_users()
+
+    bad_metric = client.get(f"/v1/analytics/{user_id}/timeseries?metric=unknown&days=30")
+    assert bad_metric.status_code == 400
+
+    bad_days = client.get(f"/v1/analytics/{user_id}/timeseries?metric=xp&days=400")
+    assert bad_days.status_code == 400

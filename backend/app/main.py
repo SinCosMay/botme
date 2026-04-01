@@ -19,6 +19,12 @@ WEB_DIR = Path(__file__).resolve().parent / "web"
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    app.state.metrics = {
+        "requests_total": 0,
+        "requests_error_total": 0,
+        "request_duration_ms_sum": 0.0,
+        "request_duration_ms_avg": 0.0,
+    }
     if settings.ENABLE_SCHEDULER:
         start_scheduler()
     try:
@@ -39,6 +45,16 @@ async def request_tracing_middleware(request, call_next):
     start = time.perf_counter()
     response = await call_next(request)
     elapsed_ms = (time.perf_counter() - start) * 1000
+
+    metrics_state = app.state.metrics
+    metrics_state["requests_total"] += 1
+    metrics_state["request_duration_ms_sum"] += elapsed_ms
+    metrics_state["request_duration_ms_avg"] = (
+        metrics_state["request_duration_ms_sum"] / metrics_state["requests_total"]
+    )
+    if response.status_code >= 400:
+        metrics_state["requests_error_total"] += 1
+
     response.headers["X-Request-ID"] = request_id
     logger.info(
         "request_id=%s method=%s path=%s status=%s duration_ms=%.2f",

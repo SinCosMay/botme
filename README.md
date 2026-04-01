@@ -483,7 +483,7 @@ Use this section as the single source of truth.
 - [x] Phase 1.5 complete
 - [x] Phase 2 complete
 - [~] Phase 3 in progress
-- [~] Phase 4 in progress
+- [x] Phase 4 complete
 - [~] Phase 5 in progress
 - [~] Phase 6 in progress
 
@@ -501,7 +501,8 @@ Planned tasks:
 - [x] Build dashboard pages for leaderboard and profile charts (MVP static pages)
 - [x] Add opt-in background scheduler for cache warming
 - [x] Add structured logging + request tracing middleware
-- [~] Expand scheduler for periodic sync and broader cache warming
+- [x] Expand scheduler for periodic sync and broader cache warming
+- [x] Add metrics basics endpoint for request counters and latencies
 
 ### Changelog
 
@@ -514,6 +515,8 @@ Planned tasks:
 - 2026-04-02: Started Phase 6 infrastructure with an opt-in APScheduler job for leaderboard cache warming.
 - 2026-04-02: Added dashboard MVP pages and request-id tracing middleware.
 - 2026-04-02: Expanded scheduler with multi-page cache warming and optional periodic Codeforces sync job.
+- 2026-04-02: Completed Phase 4 analytics backend and bot leaderboard integration.
+- 2026-04-02: Added metrics basics endpoint and dashboard improvements (pagination + chart rendering).
 
 ## 15) Suggested Milestone Branch Strategy
 
@@ -529,13 +532,12 @@ Planned tasks:
 
 ## 16) Immediate Next Step (What We Should Build Next)
 
-Complete Phase 2 in this order:
-Phase 2 is complete.
+Move to Phase 5 completion in this order:
+1. Add user-friendly dashboard controls for selecting user handles (not UUID only).
+2. Add chart legends and dual-series comparison (XP + rating trend toggle persistence).
+3. Add frontend error/retry UX patterns and empty-state cards.
 
-Move to Phase 3 in this order:
-1. Add `followup_questions` and `followup_attempts` models + migration.
-2. Build follow-up generation/selection service using problem tags and difficulty.
-3. Add endpoint for follow-up answer validation with bonus XP awarding.
-4. Wire Discord follow-up command flow.
-
-After these are complete, move directly to Phase 3 (follow-up question engine).
+Then complete Phase 6:
+1. Add core-flow integration tests covering register -> assign -> solve -> follow-up.
+2. Add structured JSON log option (env-controlled) for production ingestion.
+3. Finalize docker runbook and one-command local startup docs.

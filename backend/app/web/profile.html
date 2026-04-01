@@ -14,13 +14,53 @@
   <main>
     <section class="card">
       <input id="userId" placeholder="User UUID" style="width:100%;padding:10px;border-radius:10px;border:1px solid #cad9ba;" />
-      <button onclick="loadData()" style="margin-top:10px" class="btn">Load</button>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap;">
+        <label for="metric">Series</label>
+        <select id="metric" style="padding:8px;border-radius:10px;border:1px solid #cad9ba;">
+          <option value="xp">XP</option>
+          <option value="rating">Rating</option>
+        </select>
+        <a onclick="loadData();return false;" href="#" class="btn">Load</a>
+      </div>
+      <canvas id="chart" width="800" height="280" style="margin-top:12px;width:100%;background:#fbfdf7;border:1px solid #e2e8d6;border-radius:12px;"></canvas>
       <pre id="output" style="white-space:pre-wrap;margin-top:14px"></pre>
     </section>
   </main>
   <script>
+    function drawSeries(points) {
+      const canvas = document.getElementById('chart');
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (!points || points.length === 0) {
+        ctx.fillStyle = '#5f6d52';
+        ctx.fillText('No data points yet', 12, 20);
+        return;
+      }
+
+      const values = points.map(p => p.value);
+      const max = Math.max(...values);
+      const min = Math.min(...values);
+      const span = Math.max(1, max - min);
+
+      const pad = 24;
+      const w = canvas.width - pad * 2;
+      const h = canvas.height - pad * 2;
+
+      ctx.strokeStyle = '#0f8a5f';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      points.forEach((p, i) => {
+        const x = pad + (i / Math.max(1, points.length - 1)) * w;
+        const y = pad + h - ((p.value - min) / span) * h;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+    }
+
     async function loadData() {
       const userId = document.getElementById('userId').value.trim();
+      const metric = document.getElementById('metric').value;
       const output = document.getElementById('output');
       if (!userId) {
         output.textContent = 'Enter a user id first.';
@@ -28,10 +68,11 @@
       }
       try {
         const profileRes = await fetch(`/v1/analytics/${userId}?platform=codeforces`);
-        const seriesRes = await fetch(`/v1/analytics/${userId}/timeseries?metric=xp&days=30`);
+        const seriesRes = await fetch(`/v1/analytics/${userId}/timeseries?metric=${metric}&days=30`);
         if (!profileRes.ok || !seriesRes.ok) throw new Error('Failed to fetch profile payloads');
         const profile = await profileRes.json();
         const series = await seriesRes.json();
+        drawSeries(series.points || []);
         output.textContent = JSON.stringify({ profile, series }, null, 2);
       } catch (err) {
         output.textContent = `Error: ${err.message}`;
