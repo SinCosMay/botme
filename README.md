@@ -484,7 +484,7 @@ Use this section as the single source of truth.
 - [x] Phase 2 complete
 - [~] Phase 3 in progress
 - [~] Phase 4 in progress
-- [ ] Phase 5 complete
+- [~] Phase 5 in progress
 - [~] Phase 6 in progress
 
 ### Current Sprint
@@ -498,9 +498,10 @@ Planned tasks:
 - [x] Add time-series analytics endpoint for XP and rating
 - [x] Add Redis-backed caching for leaderboard and time-series payloads
 - [x] Add bot `/leaderboard` command backend integration
-- [ ] Build dashboard pages for leaderboard and profile charts
+- [x] Build dashboard pages for leaderboard and profile charts (MVP static pages)
 - [x] Add opt-in background scheduler for cache warming
-- [ ] Add structured logging and metrics wiring
+- [x] Add structured logging + request tracing middleware
+- [~] Expand scheduler for periodic sync and broader cache warming
 
 ### Changelog
 
@@ -511,6 +512,8 @@ Planned tasks:
 - 2026-04-02: Started Phase 3 MVP with follow-up question generation and bonus XP answer flow.
 - 2026-04-02: Started Phase 4 with cached leaderboard and analytics time-series API endpoints.
 - 2026-04-02: Started Phase 6 infrastructure with an opt-in APScheduler job for leaderboard cache warming.
+- 2026-04-02: Added dashboard MVP pages and request-id tracing middleware.
+- 2026-04-02: Expanded scheduler with multi-page cache warming and optional periodic Codeforces sync job.
 
 ## 15) Suggested Milestone Branch Strategy
 

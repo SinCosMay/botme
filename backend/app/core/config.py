@@ -24,6 +24,13 @@ class Settings(BaseSettings):
     CODEFORCES_VERIFY_HANDLES: bool = False
     CODEFORCES_SYNC_LIMIT: int = 2000
     ENABLE_SCHEDULER: bool = False
+    SCHEDULER_CACHE_WARM_MINUTES: int = 10
+    SCHEDULER_CF_SYNC_HOURS: int = 6
+    SCHEDULER_LEADERBOARD_PAGES: int = 2
+    SCHEDULER_LEADERBOARD_LIMIT: int = 10
+    SCHEDULER_TIMESERIES_DAYS: int = 30
+    SCHEDULER_TIMESERIES_TOP_USERS: int = 5
+    SCHEDULER_ENABLE_CF_SYNC: bool = False
 
     model_config = SettingsConfigDict(
         env_file=(ROOT_DIR / ".env", BACKEND_DIR / ".env"),

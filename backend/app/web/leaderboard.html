@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BotMe Leaderboard</title>
+  <link rel="stylesheet" href="/dashboard/static/style.css" />
+</head>
+<body>
+  <header>
+    <h1>Leaderboard</h1>
+    <p><span class="tag">/v1/analytics/leaderboard</span></p>
+  </header>
+  <main>
+    <section class="card">
+      <p id="status">Loading leaderboard...</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Rank</th><th>Handle</th><th>XP</th><th>Rating</th><th>Level</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </section>
+  </main>
+  <script>
+    async function loadLeaderboard() {
+      const status = document.getElementById('status');
+      const tbody = document.getElementById('rows');
+      try {
+        const res = await fetch('/v1/analytics/leaderboard?metric=xp&page=1&limit=10');
+        if (!res.ok) throw new Error('failed to fetch leaderboard');
+        const data = await res.json();
+        tbody.innerHTML = '';
+        for (const row of data.entries) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${row.rank}</td><td>${row.cf_handle}</td><td>${row.xp}</td><td>${row.rating}</td><td>${row.level}</td>`;
+          tbody.appendChild(tr);
+        }
+        status.textContent = `Loaded ${data.entries.length} entries`;
+      } catch (err) {
+        status.textContent = `Error: ${err.message}`;
+      }
+    }
+    loadLeaderboard();
+  </script>
+</body>
+</html>

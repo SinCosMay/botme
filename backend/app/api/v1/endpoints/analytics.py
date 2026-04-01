@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -133,10 +134,12 @@ def user_timeseries(
     if cached is not None:
         return UserTimeSeriesResponse(**cached)
 
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+
     if metric_key == "xp":
         rows = (
             db.query(func.date(XpHistory.created_at).label("day"), func.sum(XpHistory.amount).label("value"))
-            .filter(XpHistory.user_id == user_id)
+            .filter(XpHistory.user_id == user_id, XpHistory.created_at >= cutoff)
             .group_by(func.date(XpHistory.created_at))
             .order_by(func.date(XpHistory.created_at).asc())
             .all()
@@ -144,7 +147,7 @@ def user_timeseries(
     else:
         rows = (
             db.query(func.date(RatingHistory.created_at).label("day"), func.max(RatingHistory.new_rating).label("value"))
-            .filter(RatingHistory.user_id == user_id)
+            .filter(RatingHistory.user_id == user_id, RatingHistory.created_at >= cutoff)
             .group_by(func.date(RatingHistory.created_at))
             .order_by(func.date(RatingHistory.created_at).asc())
             .all()

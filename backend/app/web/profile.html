@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BotMe Profile View</title>
+  <link rel="stylesheet" href="/dashboard/static/style.css" />
+</head>
+<body>
+  <header>
+    <h1>Profile Viewer</h1>
+    <p>Enter a user id to fetch profile analytics and time-series data.</p>
+  </header>
+  <main>
+    <section class="card">
+      <input id="userId" placeholder="User UUID" style="width:100%;padding:10px;border-radius:10px;border:1px solid #cad9ba;" />
+      <button onclick="loadData()" style="margin-top:10px" class="btn">Load</button>
+      <pre id="output" style="white-space:pre-wrap;margin-top:14px"></pre>
+    </section>
+  </main>
+  <script>
+    async function loadData() {
+      const userId = document.getElementById('userId').value.trim();
+      const output = document.getElementById('output');
+      if (!userId) {
+        output.textContent = 'Enter a user id first.';
+        return;
+      }
+      try {
+        const profileRes = await fetch(`/v1/analytics/${userId}?platform=codeforces`);
+        const seriesRes = await fetch(`/v1/analytics/${userId}/timeseries?metric=xp&days=30`);
+        if (!profileRes.ok || !seriesRes.ok) throw new Error('Failed to fetch profile payloads');
+        const profile = await profileRes.json();
+        const series = await seriesRes.json();
+        output.textContent = JSON.stringify({ profile, series }, null, 2);
+      } catch (err) {
+        output.textContent = `Error: ${err.message}`;
+      }
+    }
+  </script>
+</body>
+</html>
