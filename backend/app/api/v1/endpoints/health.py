@@ -21,4 +21,5 @@ def metrics(request: Request) -> dict[str, float | int]:
         "requests_error_total": int(metrics_state.get("requests_error_total", 0)),
         "request_duration_ms_sum": float(metrics_state.get("request_duration_ms_sum", 0.0)),
         "request_duration_ms_avg": float(metrics_state.get("request_duration_ms_avg", 0.0)),
+        "path_bucket_count": int(len(metrics_state.get("path_counts", {}))),
     }

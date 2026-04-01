@@ -1,4 +1,5 @@
 from pathlib import Path
+from random import random
 from urllib.parse import quote_plus
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -15,6 +16,8 @@ class Settings(BaseSettings):
     API_URL: str = "http://localhost:8000"
     LOG_LEVEL: str = "INFO"
     LOG_JSON: bool = False
+    LOG_SAMPLE_RATE: float = 1.0
+    METRICS_PATH_BUCKET_LIMIT: int = 50
 
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "change_me"

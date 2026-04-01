@@ -19,22 +19,32 @@
         <select id="metric" style="padding:8px;border-radius:10px;border:1px solid #cad9ba;">
           <option value="xp">XP</option>
           <option value="rating">Rating</option>
+          <option value="both">XP + Rating</option>
         </select>
         <a onclick="loadData();return false;" href="#" class="btn">Load</a>
+        <a onclick="loadData();return false;" href="#" class="btn">Retry</a>
+      </div>
+      <div style="margin-top:8px;color:#325d2f;">
+        <span class="tag">Green line: XP</span>
+        <span class="tag">Blue line: Rating</span>
       </div>
       <canvas id="chart" width="800" height="280" style="margin-top:12px;width:100%;background:#fbfdf7;border:1px solid #e2e8d6;border-radius:12px;"></canvas>
       <pre id="output" style="white-space:pre-wrap;margin-top:14px"></pre>
     </section>
   </main>
   <script>
-    function drawSeries(points) {
+    function drawSeries(points, color, clear) {
       const canvas = document.getElementById('chart');
       const ctx = canvas.getContext('2d');
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (clear) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
 
       if (!points || points.length === 0) {
-        ctx.fillStyle = '#5f6d52';
-        ctx.fillText('No data points yet', 12, 20);
+        if (clear) {
+          ctx.fillStyle = '#5f6d52';
+          ctx.fillText('No data points yet', 12, 20);
+        }
         return;
       }
 
@@ -47,7 +57,7 @@
       const w = canvas.width - pad * 2;
       const h = canvas.height - pad * 2;
 
-      ctx.strokeStyle = '#0f8a5f';
+      ctx.strokeStyle = color;
       ctx.lineWidth = 2;
       ctx.beginPath();
       points.forEach((p, i) => {
@@ -77,11 +87,28 @@
         }
 
         const profileRes = await fetch(`/v1/analytics/${userId}?platform=codeforces`);
-        const seriesRes = await fetch(`/v1/analytics/${userId}/timeseries?metric=${metric}&days=30`);
-        if (!profileRes.ok || !seriesRes.ok) throw new Error('Failed to fetch profile payloads');
+        if (!profileRes.ok) throw new Error('Failed to fetch profile payloads');
         const profile = await profileRes.json();
+
+        if (metric === 'both') {
+          const [xpRes, ratingRes] = await Promise.all([
+            fetch(`/v1/analytics/${userId}/timeseries?metric=xp&days=30`),
+            fetch(`/v1/analytics/${userId}/timeseries?metric=rating&days=30`),
+          ]);
+          if (!xpRes.ok || !ratingRes.ok) throw new Error('Failed to fetch time-series payloads');
+          const xpSeries = await xpRes.json();
+          const ratingSeries = await ratingRes.json();
+          drawSeries(xpSeries.points || [], '#0f8a5f', true);
+          drawSeries(ratingSeries.points || [], '#17616a', false);
+          output.textContent = JSON.stringify({ profile, xpSeries, ratingSeries }, null, 2);
+          return;
+        }
+
+        const seriesRes = await fetch(`/v1/analytics/${userId}/timeseries?metric=${metric}&days=30`);
+        if (!seriesRes.ok) throw new Error('Failed to fetch time-series payloads');
         const series = await seriesRes.json();
-        drawSeries(series.points || []);
+        const color = metric === 'rating' ? '#17616a' : '#0f8a5f';
+        drawSeries(series.points || [], color, true);
         output.textContent = JSON.stringify({ profile, series }, null, 2);
       } catch (err) {
         output.textContent = `Error: ${err.message}`;

@@ -484,12 +484,12 @@ Use this section as the single source of truth.
 - [x] Phase 2 complete
 - [x] Phase 3 complete
 - [x] Phase 4 complete
-- [~] Phase 5 in progress
-- [~] Phase 6 in progress
+- [x] Phase 5 complete
+- [x] Phase 6 complete
 
 ### Current Sprint
 
-- Sprint goal: Phase 4 analytics and leaderboard
+- Sprint goal: Project completion and hardening
 - Start date: 2026-04-02
 - End date: TBD
 
@@ -503,6 +503,9 @@ Planned tasks:
 - [x] Add structured logging + request tracing middleware
 - [x] Expand scheduler for periodic sync and broader cache warming
 - [x] Add metrics basics endpoint for request counters and latencies
+- [x] Add multi-user negative-path integration tests
+- [x] Add opt-in request log sampling and metrics path bucket guardrails
+- [x] Add dashboard dual-series comparison and retry UX improvements
 
 ### Changelog
 
@@ -520,6 +523,8 @@ Planned tasks:
 - 2026-04-02: Added end-to-end integration test for register -> assign -> verify -> follow-up flow.
 - 2026-04-02: Added bot `/followup` command and solved-response IDs for complete follow-up loop.
 - 2026-04-02: Added profile lookup by Codeforces handle for API and dashboard UX.
+- 2026-04-02: Added multi-user negative-path integration tests and metrics cardinality guardrails.
+- 2026-04-02: Completed dashboard dual-series rendering, legends, and retry UX.
 
 ## 17) Local Runbook (One-Machine Setup)
 
@@ -549,6 +554,7 @@ REDIS_URL=redis://localhost:6379
 API_URL=http://localhost:8000
 LOG_LEVEL=INFO
 LOG_JSON=false
+LOG_SAMPLE_RATE=1.0
 ENABLE_SCHEDULER=false
 ```
 
@@ -562,6 +568,11 @@ cd ..
 ### 5. Start backend
 ```bash
 uvicorn backend.app.main:app --reload --port 8000
+```
+
+### 5b. Start Discord bot (optional)
+```bash
+python -m bot.main
 ```
 
 ### 6. Verify health and dashboard
@@ -589,11 +600,9 @@ pytest -q
 
 ## 16) Immediate Next Step (What We Should Build Next)
 
-Move to Phase 5 completion in this order:
-1. Add chart legends and dual-series comparison (XP + rating trend toggle persistence).
-2. Add frontend error/retry UX patterns and empty-state cards.
+MVP project scope is complete.
 
-Then complete Phase 6:
-1. Add multi-user integration tests with negative/error path assertions.
-2. Add opt-in request sampling for logs and metrics cardinality guardrails.
-3. Finalize docker runbook with backend + bot launch profile.
+Optional next improvements:
+1. Add CI workflow for tests and lint checks on pull requests.
+2. Add auth layer for admin-only sync/import endpoints.
+3. Add deployment manifests for a cloud target (Render/Fly.io/Azure).

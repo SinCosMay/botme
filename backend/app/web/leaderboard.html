@@ -38,6 +38,7 @@
       <div style="display:flex;gap:8px;margin-top:10px;">
         <a class="btn" href="#" onclick="prevPage();return false;">Prev</a>
         <a class="btn" href="#" onclick="nextPage();return false;">Next</a>
+        <a class="btn" href="#" onclick="loadLeaderboard();return false;">Retry</a>
       </div>
     </section>
   </main>
@@ -69,6 +70,10 @@
         if (!res.ok) throw new Error('failed to fetch leaderboard');
         const data = await res.json();
         tbody.innerHTML = '';
+        if (!data.entries || data.entries.length === 0) {
+          status.textContent = `No entries on page ${data.page}.`;
+          return;
+        }
         for (const row of data.entries) {
           const tr = document.createElement('tr');
           tr.innerHTML = `<td>${row.rank}</td><td>${row.cf_handle}</td><td>${row.xp}</td><td>${row.rating}</td><td>${row.level}</td>`;

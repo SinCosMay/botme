@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 import logging
+from random import random
 import time
 from pathlib import Path
 from uuid import uuid4
@@ -24,6 +25,7 @@ async def lifespan(_: FastAPI):
         "requests_error_total": 0,
         "request_duration_ms_sum": 0.0,
         "request_duration_ms_avg": 0.0,
+        "path_counts": {},
     }
     if settings.ENABLE_SCHEDULER:
         start_scheduler()
@@ -52,18 +54,29 @@ async def request_tracing_middleware(request, call_next):
     metrics_state["request_duration_ms_avg"] = (
         metrics_state["request_duration_ms_sum"] / metrics_state["requests_total"]
     )
+
+    path = request.url.path
+    path_counts = metrics_state["path_counts"]
+    if path in path_counts:
+        path_counts[path] += 1
+    elif len(path_counts) < max(1, settings.METRICS_PATH_BUCKET_LIMIT):
+        path_counts[path] = 1
+    else:
+        path_counts["_other"] = path_counts.get("_other", 0) + 1
+
     if response.status_code >= 400:
         metrics_state["requests_error_total"] += 1
 
     response.headers["X-Request-ID"] = request_id
-    logger.info(
-        "request_id=%s method=%s path=%s status=%s duration_ms=%.2f",
-        request_id,
-        request.method,
-        request.url.path,
-        response.status_code,
-        elapsed_ms,
-    )
+    if random() <= max(0.0, min(settings.LOG_SAMPLE_RATE, 1.0)):
+        logger.info(
+            "request_id=%s method=%s path=%s status=%s duration_ms=%.2f",
+            request_id,
+            request.method,
+            request.url.path,
+            response.status_code,
+            elapsed_ms,
+        )
     return response
 
 
