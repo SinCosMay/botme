@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379"
     DISCORD_TOKEN: str = ""
     API_URL: str = "http://localhost:8000"
+    LOG_LEVEL: str = "INFO"
+    LOG_JSON: bool = False
 
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "change_me"

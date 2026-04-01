@@ -60,17 +60,17 @@ Current notes:
 
 Completed now:
 - [x] Replaced demo API surface with domain API routes under `/v1`.
-- [x] Implemented registration, assignment, analytics, and submission endpoints.
+- [x] Implemented registration, assignment, verification, follow-up, analytics, health, and metrics endpoints.
 - [x] Added Codeforces services for handle verification, problemset sync, and assignment solve verification.
 - [x] Added LeetCode company dataset import + assignment + mark-solved flow.
-- [x] Added Phase 2 core solve logic: duplicate protection, XP/rating update, level recompute, and streak progression.
-- [x] Added backend tests for registration, assignment, LeetCode track, and Phase 2 verification service behavior.
+- [x] Added Phase 2/3 core logic: duplicate protection, XP/rating/streak progression, follow-up bonus XP, and history tracking.
+- [x] Added Phase 4 analytics APIs (leaderboard + time-series) with Redis-backed cache fallbacks.
+- [x] Added Phase 5 dashboard MVP pages and Phase 6 observability baseline (request tracing + metrics endpoint).
 
 Not completed yet:
-- [ ] Add `rating_history` and `xp_history` tables + write paths.
-- [ ] Add leaderboard endpoint and ranking queries.
-- [ ] Add follow-up question engine and bonus XP flow.
-- [ ] Add scheduled jobs for streak reset, challenge creation, and cache warming.
+- [ ] Advanced dashboard polish (chart legends, richer profile selectors, retry UX).
+- [ ] Extended integration tests for multi-user and failure-path scenarios.
+- [ ] Production deployment runbook and CI checks.
 
 ## 4) System Architecture (Target)
 
@@ -517,6 +517,61 @@ Planned tasks:
 - 2026-04-02: Expanded scheduler with multi-page cache warming and optional periodic Codeforces sync job.
 - 2026-04-02: Completed Phase 4 analytics backend and bot leaderboard integration.
 - 2026-04-02: Added metrics basics endpoint and dashboard improvements (pagination + chart rendering).
+- 2026-04-02: Added end-to-end integration test for register -> assign -> verify -> follow-up flow.
+
+## 17) Local Runbook (One-Machine Setup)
+
+### Prerequisites
+- Python 3.12+
+- Docker Desktop
+
+### 1. Start infrastructure
+```bash
+docker compose up -d
+```
+
+### 2. Install Python dependencies
+```bash
+python -m pip install -r requirements.txt
+```
+
+### 3. Configure environment
+Create `.env` in repo root with at least:
+```env
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=change_me
+POSTGRES_DB=botme
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+REDIS_URL=redis://localhost:6379
+API_URL=http://localhost:8000
+LOG_LEVEL=INFO
+LOG_JSON=false
+ENABLE_SCHEDULER=false
+```
+
+### 4. Run migrations
+```bash
+cd backend
+alembic upgrade head
+cd ..
+```
+
+### 5. Start backend
+```bash
+uvicorn backend.app.main:app --reload --port 8000
+```
+
+### 6. Verify health and dashboard
+- `GET http://localhost:8000/v1/health`
+- `GET http://localhost:8000/v1/ready`
+- `GET http://localhost:8000/v1/metrics`
+- Open `http://localhost:8000/dashboard`
+
+### 7. Run tests
+```bash
+pytest -q
+```
 
 ## 15) Suggested Milestone Branch Strategy
 

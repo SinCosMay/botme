@@ -13,7 +13,7 @@ from app.core.config import settings
 from app.core.logging import configure_logging
 from app.jobs.scheduler import start_scheduler, stop_scheduler
 
-configure_logging()
+configure_logging(level=settings.LOG_LEVEL, json_logs=settings.LOG_JSON)
 logger = logging.getLogger(__name__)
 WEB_DIR = Path(__file__).resolve().parent / "web"
 
