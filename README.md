@@ -29,11 +29,20 @@ What this demonstrates on a resume:
 
 ```text
 botme/
-  api/
   backend/
     app/
       main.py
+      api/v1/
+      core/
+      models/
+      schemas/
+      services/
+    alembic/
+    tests/
   bot/
+    main.py
+    commands/
+    services/
   scripts/
   shared/
   docker-compose.yml
@@ -42,26 +51,26 @@ botme/
 
 Current notes:
 - Docker services exist for Postgres and Redis in `docker-compose.yml`.
-- `backend/app/main.py` currently contains sample CRUD logic (campaign demo), not final project domain logic.
-- `backend/app/core/config.py` and `backend/app/core/database.py` exist for env-based DB setup.
-- Alembic scaffolding and first migration are present in `backend/alembic/`.
-- Baseline SQLAlchemy models exist in `backend/app/models/user.py` and `backend/app/models/problem.py`.
+- FastAPI app now runs domain routes via `v1` router (`users`, `problems`, `submissions`, `analytics`, `leetcode`, `health`).
+- Alembic migration includes `users`, `problems`, `assignments`, `submissions`, and `user_platform_stats`.
+- Codeforces sync + verification services are implemented (`problemset.problems`, `user.info`, `user.status`).
+- Bot slash commands are wired for register, problem assignment, solve verification, profile, and LeetCode company flow.
 
-## 3) Current Progress Snapshot (As Of 2026-04-01)
+## 3) Current Progress Snapshot (As Of 2026-04-02)
 
 Completed now:
-- [x] Added `.env.example` for backend runtime configuration.
-- [x] Added `Settings` loader via `pydantic-settings`.
-- [x] Added SQLAlchemy engine/session/base module.
-- [x] Added initial domain models (`users`, `problems`).
-- [x] Added Alembic setup and created initial migration.
-- [x] Added campaign list pagination support in demo API.
+- [x] Replaced demo API surface with domain API routes under `/v1`.
+- [x] Implemented registration, assignment, analytics, and submission endpoints.
+- [x] Added Codeforces services for handle verification, problemset sync, and assignment solve verification.
+- [x] Added LeetCode company dataset import + assignment + mark-solved flow.
+- [x] Added Phase 2 core solve logic: duplicate protection, XP/rating update, level recompute, and streak progression.
+- [x] Added backend tests for registration, assignment, LeetCode track, and Phase 2 verification service behavior.
 
 Not completed yet:
-- [ ] Replace campaign demo endpoints with project domain endpoints.
-- [ ] Switch FastAPI app runtime to Postgres + Redis-backed domain services.
-- [ ] Implement Codeforces assignment/verification APIs.
-- [ ] Integrate Discord bot command handlers with backend domain routes.
+- [ ] Add `rating_history` and `xp_history` tables + write paths.
+- [ ] Add leaderboard endpoint and ranking queries.
+- [ ] Add follow-up question engine and bonus XP flow.
+- [ ] Add scheduled jobs for streak reset, challenge creation, and cache warming.
 
 ## 4) System Architecture (Target)
 
@@ -266,6 +275,10 @@ Codeforces integration routes/services:
 - fetch submissions by CF handle
 - verify `OK` verdict for contest+index after assignment timestamp
 
+Codeforces API auth note:
+- Current endpoints used (`problemset.problems`, `user.info`, `user.status`) work without API keys.
+- API key/secret is optional unless you later use signed endpoints or need stricter rate-limit handling.
+
 LeetCode integration note:
 - No official public LeetCode API equivalent to CF verification.
 - Implement V1 as tracked practice mode:
@@ -465,10 +478,10 @@ Use this section as the single source of truth.
 
 ### Status Board
 
-- [~] Phase 0 in progress
-- [ ] Phase 1 complete
-- [ ] Phase 1.5 complete
-- [ ] Phase 2 complete
+- [x] Phase 0 complete
+- [x] Phase 1 complete
+- [x] Phase 1.5 complete
+- [~] Phase 2 in progress
 - [ ] Phase 3 complete
 - [ ] Phase 4 complete
 - [ ] Phase 5 complete
@@ -476,21 +489,23 @@ Use this section as the single source of truth.
 
 ### Current Sprint
 
-- Sprint goal: Phase 0 foundation
-- Start date: 2026-04-01
+- Sprint goal: Phase 2 hardening and completion
+- Start date: 2026-04-02
 - End date: TBD
 
 Planned tasks:
-- [ ] Replace backend campaign demo with domain skeleton
-- [~] Add SQLAlchemy models for users/problems/submissions
-- [x] Add Alembic setup and first migration
-- [ ] Add basic health + readiness endpoints
-- [x] Add env config and `.env.example`
+- [x] Verify Codeforces solves from latest active assignment
+- [x] Enforce duplicate-safe reward behavior
+- [x] Update XP, rating, level, and platform solved counters
+- [x] Add streak progression logic in solve recording
+- [ ] Add `rating_history` and `xp_history` persistence
+- [ ] Add API tests for `/v1/submissions/verify` with mocked CF responses
 
 ### Changelog
 
 - 2026-04-01: Initial roadmap README created.
 - 2026-04-01: Added Phase 0 progress snapshot and updated tracker to reflect current codebase status.
+- 2026-04-02: Updated status to reflect completed Phase 1/1.5 and in-progress Phase 2 implementation, including solve verification and streak logic.
 
 ## 15) Suggested Milestone Branch Strategy
 
@@ -506,10 +521,10 @@ Planned tasks:
 
 ## 16) Immediate Next Step (What We Should Build Next)
 
-Start with Phase 0 in this order:
-1. Replace backend demo (`campaign`) with domain modules (`users`, `problems`, `submissions`, `progress`).
-2. Switch backend DB from local sqlite demo to Postgres via env config.
-3. Add migrations.
-4. Add basic tests for registration and assignment services.
+Complete Phase 2 in this order:
+1. Add `rating_history` and `xp_history` models + migration.
+2. Write history rows during verified Codeforces solve updates.
+3. Add endpoint-level tests for `/v1/submissions/verify` using mocked Codeforces responses.
+4. Add `/solved` command module wiring in `bot/commands/` to match bot main command behavior.
 
-Once Phase 0 is done, we move to Phase 1, then Phase 1.5 (LeetCode company-wise track), and keep this README updated after each milestone.
+After these are complete, move directly to Phase 3 (follow-up question engine).
