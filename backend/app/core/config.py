@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379"
     DISCORD_TOKEN: str = ""
     API_URL: str = "http://localhost:8000"
+    FRONTEND_ORIGINS: str = "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000"
     LOG_LEVEL: str = "INFO"
     LOG_JSON: bool = False
     LOG_SAMPLE_RATE: float = 1.0

@@ -567,7 +567,21 @@ cd ..
 
 ### 5. Start backend
 ```bash
-uvicorn backend.app.main:app --reload --port 8000
+uvicorn app.main:app --app-dir backend --reload --port 8000
+```
+
+### 5a. Start frontend (new folder)
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+If backend runs on a different host/port, set frontend env before start:
+```bash
+# PowerShell
+$env:VITE_BACKEND_PROXY_TARGET="http://<backend-host>:8000"
+npm run dev
 ```
 
 ### 5b. Start Discord bot (optional)
@@ -579,7 +593,7 @@ python -m bot.main
 - `GET http://localhost:8000/v1/health`
 - `GET http://localhost:8000/v1/ready`
 - `GET http://localhost:8000/v1/metrics`
-- Open `http://localhost:8000/dashboard`
+- Open frontend at `http://localhost:5173`
 
 ### 7. Run tests
 ```bash

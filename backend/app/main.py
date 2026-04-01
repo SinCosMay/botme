@@ -6,7 +6,8 @@ from pathlib import Path
 from uuid import uuid4
 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.v1.router import router as v1_router
@@ -17,6 +18,7 @@ from app.jobs.scheduler import start_scheduler, stop_scheduler
 configure_logging(level=settings.LOG_LEVEL, json_logs=settings.LOG_JSON)
 logger = logging.getLogger(__name__)
 WEB_DIR = Path(__file__).resolve().parent / "web"
+HAS_WEB_DIR = WEB_DIR.exists() and WEB_DIR.is_dir()
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
@@ -37,8 +39,20 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title="BotMe API", version="0.1.0", lifespan=lifespan)
+
+frontend_origins = [origin.strip() for origin in settings.FRONTEND_ORIGINS.split(",") if origin.strip()]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=frontend_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(v1_router, prefix="/v1")
-app.mount("/dashboard/static", StaticFiles(directory=str(WEB_DIR)), name="dashboard-static")
+if HAS_WEB_DIR:
+    app.mount("/dashboard/static", StaticFiles(directory=str(WEB_DIR)), name="dashboard-static")
 
 
 @app.middleware("http")
@@ -86,15 +100,30 @@ def root() -> dict[str, str]:
 
 
 @app.get("/dashboard")
-def dashboard_home() -> FileResponse:
+def dashboard_home():
+    if not HAS_WEB_DIR:
+        return JSONResponse(
+            status_code=404,
+            content={"detail": "Dashboard files are not present in backend/app/web. Use frontend dev server."},
+        )
     return FileResponse(WEB_DIR / "index.html")
 
 
 @app.get("/dashboard/leaderboard")
-def dashboard_leaderboard() -> FileResponse:
+def dashboard_leaderboard():
+    if not HAS_WEB_DIR:
+        return JSONResponse(
+            status_code=404,
+            content={"detail": "Dashboard files are not present in backend/app/web. Use frontend dev server."},
+        )
     return FileResponse(WEB_DIR / "leaderboard.html")
 
 
 @app.get("/dashboard/profile")
-def dashboard_profile() -> FileResponse:
+def dashboard_profile():
+    if not HAS_WEB_DIR:
+        return JSONResponse(
+            status_code=404,
+            content={"detail": "Dashboard files are not present in backend/app/web. Use frontend dev server."},
+        )
     return FileResponse(WEB_DIR / "profile.html")
