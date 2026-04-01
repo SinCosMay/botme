@@ -2,9 +2,11 @@ from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
+from app.models.rating_history import RatingHistory
 from app.models.submission import Submission
 from app.models.user import User
 from app.models.user_platform_stat import UserPlatformStat
+from app.models.xp_history import XpHistory
 from app.services.progress_service import base_xp_for_rating, codeforces_rating_delta, recompute_level
 
 
@@ -68,12 +70,35 @@ def record_codeforces_solve(
     )
     db.add(submission)
 
+    old_rating = user.rating
+
     user.current_streak = _next_streak(user.last_solved_at, user.current_streak, now)
     user.longest_streak = max(user.longest_streak, user.current_streak)
     user.xp += xp_awarded
     user.rating += rating_delta
     user.level = recompute_level(user.xp)
     user.last_solved_at = now
+
+    db.add(
+        XpHistory(
+            user_id=user.id,
+            amount=xp_awarded,
+            source="codeforces_verified_solve",
+            metadata_json={
+                "problem_id": problem_id,
+                "platform": "codeforces",
+                "cf_submission_id": cf_submission_id,
+            },
+        )
+    )
+    db.add(
+        RatingHistory(
+            user_id=user.id,
+            old_rating=old_rating,
+            new_rating=user.rating,
+            reason="codeforces_verified_solve",
+        )
+    )
 
     stat = _get_or_create_stat(db, user.id, "codeforces")
     stat.streak = _next_streak(stat.last_solved_at, stat.streak, now)

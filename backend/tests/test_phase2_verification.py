@@ -2,8 +2,10 @@ from datetime import datetime, timedelta, timezone
 
 from app.main import app
 from app.models.problem import Problem
+from app.models.rating_history import RatingHistory
 from app.models.submission import Submission
 from app.models.user import User
+from app.models.xp_history import XpHistory
 from app.services.verification_service import record_codeforces_solve
 
 
@@ -50,6 +52,11 @@ def test_phase2_codeforces_solve_updates_profile_and_streak(client):
         assert user.current_streak == 4
         assert user.longest_streak == 4
         assert user.level >= 1
+
+        xp_history_count = db.query(XpHistory).filter(XpHistory.user_id == user.id).count()
+        rating_history_count = db.query(RatingHistory).filter(RatingHistory.user_id == user.id).count()
+        assert xp_history_count == 1
+        assert rating_history_count == 1
     finally:
         db.close()
 
@@ -93,6 +100,10 @@ def test_phase2_duplicate_codeforces_solve_is_idempotent(client):
         assert second_delta == 0
 
         submissions_count = db.query(Submission).filter(Submission.user_id == user.id).count()
+        xp_history_count = db.query(XpHistory).filter(XpHistory.user_id == user.id).count()
+        rating_history_count = db.query(RatingHistory).filter(RatingHistory.user_id == user.id).count()
         assert submissions_count == 1
+        assert xp_history_count == 1
+        assert rating_history_count == 1
     finally:
         db.close()

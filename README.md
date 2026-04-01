@@ -498,7 +498,7 @@ Planned tasks:
 - [x] Enforce duplicate-safe reward behavior
 - [x] Update XP, rating, level, and platform solved counters
 - [x] Add streak progression logic in solve recording
-- [ ] Add `rating_history` and `xp_history` persistence
+- [x] Add `rating_history` and `xp_history` persistence
 - [ ] Add API tests for `/v1/submissions/verify` with mocked CF responses
 
 ### Changelog
@@ -522,9 +522,9 @@ Planned tasks:
 ## 16) Immediate Next Step (What We Should Build Next)
 
 Complete Phase 2 in this order:
-1. Add `rating_history` and `xp_history` models + migration.
-2. Write history rows during verified Codeforces solve updates.
-3. Add endpoint-level tests for `/v1/submissions/verify` using mocked Codeforces responses.
-4. Add `/solved` command module wiring in `bot/commands/` to match bot main command behavior.
+1. Add endpoint-level tests for `/v1/submissions/verify` using mocked Codeforces responses.
+2. Add `/solved` command module wiring in `bot/commands/` to match bot main command behavior.
+3. Add strict error mapping in bot client for common backend response codes.
+4. Mark Phase 2 complete and open Phase 3 branch.
 
 After these are complete, move directly to Phase 3 (follow-up question engine).
