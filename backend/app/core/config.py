@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     CODEFORCES_API_BASE: str = "https://codeforces.com/api"
     CODEFORCES_VERIFY_HANDLES: bool = False
     CODEFORCES_SYNC_LIMIT: int = 2000
+    ENABLE_SCHEDULER: bool = False
 
     model_config = SettingsConfigDict(
         env_file=(ROOT_DIR / ".env", BACKEND_DIR / ".env"),

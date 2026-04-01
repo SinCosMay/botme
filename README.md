@@ -485,7 +485,7 @@ Use this section as the single source of truth.
 - [~] Phase 3 in progress
 - [~] Phase 4 in progress
 - [ ] Phase 5 complete
-- [ ] Phase 6 complete
+- [~] Phase 6 in progress
 
 ### Current Sprint
 
@@ -499,6 +499,8 @@ Planned tasks:
 - [x] Add Redis-backed caching for leaderboard and time-series payloads
 - [x] Add bot `/leaderboard` command backend integration
 - [ ] Build dashboard pages for leaderboard and profile charts
+- [x] Add opt-in background scheduler for cache warming
+- [ ] Add structured logging and metrics wiring
 
 ### Changelog
 
@@ -508,6 +510,7 @@ Planned tasks:
 - 2026-04-02: Completed remaining Phase 2 hardening (mocked verify endpoint tests, bot command module wiring, backend error mapping).
 - 2026-04-02: Started Phase 3 MVP with follow-up question generation and bonus XP answer flow.
 - 2026-04-02: Started Phase 4 with cached leaderboard and analytics time-series API endpoints.
+- 2026-04-02: Started Phase 6 infrastructure with an opt-in APScheduler job for leaderboard cache warming.
 
 ## 15) Suggested Milestone Branch Strategy
 
