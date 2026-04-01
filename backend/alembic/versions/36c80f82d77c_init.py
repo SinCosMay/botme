@@ -139,8 +139,44 @@ def upgrade() -> None:
     )
     op.create_index(op.f("ix_xp_history_user_id"), "xp_history", ["user_id"], unique=False)
 
+    op.create_table(
+        "followup_questions",
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("problem_id", sa.String(length=36), nullable=False),
+        sa.Column("question_type", sa.String(length=32), nullable=False),
+        sa.Column("prompt", sa.String(length=1000), nullable=False),
+        sa.Column("expected_answer", sa.JSON(), nullable=False),
+        sa.Column("bonus_xp", sa.Integer(), nullable=False),
+        sa.ForeignKeyConstraint(["problem_id"], ["problems.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(op.f("ix_followup_questions_problem_id"), "followup_questions", ["problem_id"], unique=False)
+
+    op.create_table(
+        "followup_attempts",
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("submission_id", sa.String(length=36), nullable=False),
+        sa.Column("question_id", sa.String(length=36), nullable=False),
+        sa.Column("user_answer", sa.String(length=2000), nullable=False),
+        sa.Column("is_correct", sa.Boolean(), nullable=False),
+        sa.Column("awarded_xp", sa.Integer(), nullable=False),
+        sa.Column("attempted_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.ForeignKeyConstraint(["question_id"], ["followup_questions.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["submission_id"], ["submissions.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(op.f("ix_followup_attempts_question_id"), "followup_attempts", ["question_id"], unique=False)
+    op.create_index(op.f("ix_followup_attempts_submission_id"), "followup_attempts", ["submission_id"], unique=False)
+
 
 def downgrade() -> None:
+    op.drop_index(op.f("ix_followup_attempts_submission_id"), table_name="followup_attempts")
+    op.drop_index(op.f("ix_followup_attempts_question_id"), table_name="followup_attempts")
+    op.drop_table("followup_attempts")
+
+    op.drop_index(op.f("ix_followup_questions_problem_id"), table_name="followup_questions")
+    op.drop_table("followup_questions")
+
     op.drop_index(op.f("ix_xp_history_user_id"), table_name="xp_history")
     op.drop_table("xp_history")
 

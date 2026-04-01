@@ -9,7 +9,17 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from app.core.config import settings
 from app.core.database import Base
-from app.models import assignment, problem, rating_history, submission, user, user_platform_stat, xp_history  # noqa: F401
+from app.models import (  # noqa: F401
+    assignment,
+    followup_attempt,
+    followup_question,
+    problem,
+    rating_history,
+    submission,
+    user,
+    user_platform_stat,
+    xp_history,
+)
 
 
 config = context.config

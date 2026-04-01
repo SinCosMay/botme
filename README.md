@@ -482,24 +482,23 @@ Use this section as the single source of truth.
 - [x] Phase 1 complete
 - [x] Phase 1.5 complete
 - [x] Phase 2 complete
-- [ ] Phase 3 complete
+- [~] Phase 3 in progress
 - [ ] Phase 4 complete
 - [ ] Phase 5 complete
 - [ ] Phase 6 complete
 
 ### Current Sprint
 
-- Sprint goal: Phase 2 hardening and completion
+- Sprint goal: Phase 3 follow-up MVP
 - Start date: 2026-04-02
 - End date: TBD
 
 Planned tasks:
-- [x] Verify Codeforces solves from latest active assignment
-- [x] Enforce duplicate-safe reward behavior
-- [x] Update XP, rating, level, and platform solved counters
-- [x] Add streak progression logic in solve recording
-- [x] Add `rating_history` and `xp_history` persistence
-- [x] Add API tests for `/v1/submissions/verify` with mocked CF responses
+- [x] Add `followup_questions` and `followup_attempts` persistence models
+- [x] Auto-generate follow-up prompt after verified solve
+- [x] Add `/v1/followup/answer` endpoint with bonus XP handling
+- [x] Prevent duplicate follow-up bonus awards per submission
+- [x] Add Phase 3 API tests for follow-up flow
 
 ### Changelog
 
@@ -507,6 +506,7 @@ Planned tasks:
 - 2026-04-01: Added Phase 0 progress snapshot and updated tracker to reflect current codebase status.
 - 2026-04-02: Updated status to reflect completed Phase 1/1.5 and in-progress Phase 2 implementation, including solve verification and streak logic.
 - 2026-04-02: Completed remaining Phase 2 hardening (mocked verify endpoint tests, bot command module wiring, backend error mapping).
+- 2026-04-02: Started Phase 3 MVP with follow-up question generation and bonus XP answer flow.
 
 ## 15) Suggested Milestone Branch Strategy
 
