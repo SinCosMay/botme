@@ -1,3 +1,5 @@
+import re
+
 from sqlalchemy.orm import Session
 
 from app.models.followup_attempt import FollowupAttempt
@@ -10,7 +12,38 @@ from app.services.progress_service import recompute_level
 
 
 def _normalized_words(value: str) -> list[str]:
-    return [token.strip().lower() for token in value.split() if token.strip()]
+    return [token.strip().lower() for token in re.split(r"[^a-zA-Z0-9_+]+", value) if token.strip()]
+
+
+KEYWORD_ALIASES: dict[str, list[str]] = {
+    "dp": ["dp", "dynamic programming"],
+    "dfs": ["dfs", "depth first search"],
+    "bfs": ["bfs", "breadth first search"],
+    "two pointers": ["two pointers", "two-pointer", "two pointer"],
+    "binary search": ["binary search", "bisect"],
+    "prefix sum": ["prefix sum", "cumulative sum"],
+    "disjoint set union": ["disjoint set union", "dsu", "union find", "union-find"],
+}
+
+
+def _keyword_matches(keyword: str, normalized_answer: str, answer_words: set[str]) -> bool:
+    keyword = keyword.strip().lower()
+    if not keyword:
+        return True
+
+    variants = [keyword, *KEYWORD_ALIASES.get(keyword, [])]
+    for variant in variants:
+        variant = variant.strip().lower()
+        if not variant:
+            continue
+        if variant in normalized_answer:
+            return True
+
+        tokens = _normalized_words(variant)
+        if tokens and all(token in answer_words for token in tokens):
+            return True
+
+    return False
 
 
 def get_or_create_followup_question(db: Session, *, problem: Problem) -> FollowupQuestion:
@@ -65,10 +98,13 @@ def answer_followup(
         return existing_attempt, 0
 
     keywords = [str(k).strip().lower() for k in (question.expected_answer or {}).get("keywords", [])]
-    answer_words = _normalized_words(answer)
-    normalized_answer = " ".join(answer_words)
+    answer_word_list = _normalized_words(answer)
+    answer_words = set(answer_word_list)
+    normalized_answer = " ".join(answer_word_list)
 
-    is_correct = bool(keywords) and all(keyword in normalized_answer for keyword in keywords)
+    is_correct = bool(keywords) and all(
+        _keyword_matches(keyword, normalized_answer, answer_words) for keyword in keywords
+    )
     awarded_xp = question.bonus_xp if is_correct else 0
 
     attempt = FollowupAttempt(

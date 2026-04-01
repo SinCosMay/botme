@@ -17,10 +17,15 @@ client = BackendClient(settings.API_URL)
 intents = discord.Intents.default()
 bot = commands.Bot(command_prefix="/", intents=intents)
 
+GUILD_ID = 740102523716763668
 
 @bot.event
 async def on_ready() -> None:
-    await bot.tree.sync()
+    guild = discord.Object(id=GUILD_ID)
+    bot.tree.copy_global_to(guild=guild)
+    synced = await bot.tree.sync(guild=guild)
+
+    print(f"Synced {len(synced)} commands to guild")
     print(f"Bot ready as {bot.user}")
 
 
@@ -36,21 +41,36 @@ async def register(interaction: discord.Interaction, cf_handle: str) -> None:
 
 
 @bot.tree.command(name="problem", description="Get a Codeforces problem")
-@app_commands.describe(mode="random|topic|rating", tag="topic tag", min_rating="minimum rating", max_rating="maximum rating")
+@app_commands.describe(
+    mode="random|topic|rating",
+    topic="topic tag (example: dp, greedy)",
+    min_rating="minimum rating",
+    max_rating="maximum rating",
+)
 async def problem(
     interaction: discord.Interaction,
     mode: str = "random",
-    tag: str | None = None,
+    topic: str | None = None,
     min_rating: int | None = None,
     max_rating: int | None = None,
 ) -> None:
     await interaction.response.defer(thinking=True)
     try:
+        resolved_mode = (mode or "random").strip().lower()
+        if topic and resolved_mode == "random":
+            resolved_mode = "topic"
+        elif (min_rating is not None or max_rating is not None) and resolved_mode == "random":
+            resolved_mode = "rating"
+
+        if min_rating is not None and max_rating is not None and min_rating > max_rating:
+            await interaction.followup.send("Assignment failed: min_rating cannot be greater than max_rating")
+            return
+
         message = await problem_cmd.run(
             client,
             str(interaction.user.id),
-            mode=mode,
-            tag=tag,
+            mode=resolved_mode,
+            tag=topic,
             min_rating=min_rating,
             max_rating=max_rating,
         )

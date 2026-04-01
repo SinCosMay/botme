@@ -21,6 +21,7 @@ def assign_codeforces_problem(
     min_rating: int | None,
     max_rating: int | None,
 ) -> tuple[Assignment, Problem]:
+    mode = (mode or "random").strip().lower()
     solved_problem_ids = {
         s.problem_id
         for s in db.query(Submission)
@@ -29,16 +30,21 @@ def assign_codeforces_problem(
     }
 
     query = db.query(Problem).filter(Problem.platform == "codeforces")
-    if mode == "rating":
-        if min_rating is not None:
-            query = query.filter(Problem.rating >= min_rating)
-        if max_rating is not None:
-            query = query.filter(Problem.rating <= max_rating)
+    if min_rating is not None:
+        query = query.filter(Problem.rating >= min_rating)
+    if max_rating is not None:
+        query = query.filter(Problem.rating <= max_rating)
+
+    normalized_tag: str | None = None
+    if tag:
+        normalized_tag = tag.strip().lower()
+
+    if mode == "topic" and not normalized_tag:
+        raise ValueError("Topic mode requires a tag")
 
     candidates = [p for p in query.all() if p.id not in solved_problem_ids]
 
-    if mode == "topic" and tag:
-        normalized_tag = tag.strip().lower()
+    if normalized_tag:
         candidates = [
             p
             for p in candidates

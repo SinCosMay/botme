@@ -16,4 +16,8 @@ async def run(
         min_rating=min_rating,
         max_rating=max_rating,
     )
-    return f"Assigned: {data['name']} ({data['url']})"
+    rating = data.get("rating")
+    tags = data.get("tags") or []
+    rating_text = f" | rating: {rating}" if rating is not None else ""
+    tags_text = f" | tags: {', '.join(tags[:5])}" if tags else ""
+    return f"Assigned: {data['name']} ({data['url']}){rating_text}{tags_text}"

@@ -44,7 +44,18 @@ def submit_followup_answer(
     elif attempt.is_correct:
         message = "Already answered before. No additional bonus XP."
     else:
-        message = "Answer recorded. No bonus XP awarded."
+        expected_keywords = [
+            str(keyword).strip()
+            for keyword in (question.expected_answer or {}).get("keywords", [])
+            if str(keyword).strip()
+        ]
+        if expected_keywords:
+            message = (
+                "Answer recorded. No bonus XP awarded. "
+                f"Expected concept keywords: {', '.join(expected_keywords[:3])}."
+            )
+        else:
+            message = "Answer recorded. No bonus XP awarded."
 
     return FollowupAnswerResponse(
         is_correct=attempt.is_correct,

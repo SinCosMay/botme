@@ -7,7 +7,7 @@ async def run(client: BackendClient, discord_id: str) -> str:
 
 	if status == "verified":
 		base = (
-			f"Verification successful. XP +{data.get('xp_awarded', 0)}, "
+			f"Solved and verified on Codeforces. XP +{data.get('xp_awarded', 0)}, "
 			f"rating delta {data.get('rating_delta', 0)}."
 		)
 		followup_prompt = data.get("followup_prompt")

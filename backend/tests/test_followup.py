@@ -2,7 +2,9 @@ from datetime import datetime, timezone
 
 from app.main import app
 from app.models.assignment import Assignment
+from app.models.followup_question import FollowupQuestion
 from app.models.problem import Problem
+from app.models.submission import Submission
 from app.models.user import User
 
 
@@ -99,3 +101,56 @@ def test_followup_duplicate_attempt_returns_zero_bonus(client, monkeypatch):
     )
     assert second.status_code == 200
     assert second.json()["awarded_xp"] == 0
+
+
+def test_followup_accepts_keyword_alias(client):
+    db = app.state.testing_session_local()
+    try:
+        user = User(discord_id="followup_u3", cf_handle="tourist_followup_u3")
+        problem = Problem(
+            platform="codeforces",
+            cf_contest_id=3001,
+            cf_index="A",
+            name="DP Problem",
+            rating=1400,
+            tags=["dp"],
+            url="https://codeforces.com/problemset/problem/3001/A",
+        )
+        db.add_all([user, problem])
+        db.flush()
+
+        submission = Submission(
+            user_id=user.id,
+            problem_id=problem.id,
+            platform="codeforces",
+            verdict="ok",
+            xp_awarded=10,
+        )
+        db.add(submission)
+        db.flush()
+
+        question = FollowupQuestion(
+            problem_id=problem.id,
+            question_type="key_idea",
+            prompt="Explain the key idea",
+            expected_answer={"keywords": ["dp"]},
+            bonus_xp=10,
+        )
+        db.add(question)
+        db.commit()
+
+        response = client.post(
+            "/v1/followup/answer",
+            json={
+                "submission_id": submission.id,
+                "question_id": question.id,
+                "answer": "I used dynamic programming with states over prefix length.",
+            },
+        )
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["is_correct"] is True
+        assert payload["awarded_xp"] == 10
+    finally:
+        db.close()
