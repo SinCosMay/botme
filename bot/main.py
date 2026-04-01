@@ -4,6 +4,7 @@ from discord.ext import commands
 
 from bot.commands import lc_company as lc_company_cmd
 from bot.commands import lc_solved as lc_solved_cmd
+from bot.commands import followup as followup_cmd
 from bot.commands import leaderboard as leaderboard_cmd
 from bot.commands import problem as problem_cmd
 from bot.commands import profile as profile_cmd
@@ -113,6 +114,22 @@ async def leaderboard(
         await interaction.followup.send(message)
     except BackendClientError as exc:  # pragma: no cover
         await interaction.followup.send(f"Leaderboard failed: {exc.message}")
+
+
+@bot.tree.command(name="followup", description="Submit follow-up answer for a solved assignment")
+@app_commands.describe(submission_id="Submission id from /solved", question_id="Question id from /solved", answer="Your answer")
+async def followup(
+    interaction: discord.Interaction,
+    submission_id: str,
+    question_id: str,
+    answer: str,
+) -> None:
+    await interaction.response.defer(thinking=True)
+    try:
+        message = await followup_cmd.run(client, submission_id=submission_id, question_id=question_id, answer=answer)
+        await interaction.followup.send(message)
+    except BackendClientError as exc:  # pragma: no cover
+        await interaction.followup.send(f"Follow-up failed: {exc.message}")
 
 
 if __name__ == "__main__":

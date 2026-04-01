@@ -482,7 +482,7 @@ Use this section as the single source of truth.
 - [x] Phase 1 complete
 - [x] Phase 1.5 complete
 - [x] Phase 2 complete
-- [~] Phase 3 in progress
+- [x] Phase 3 complete
 - [x] Phase 4 complete
 - [~] Phase 5 in progress
 - [~] Phase 6 in progress
@@ -518,6 +518,8 @@ Planned tasks:
 - 2026-04-02: Completed Phase 4 analytics backend and bot leaderboard integration.
 - 2026-04-02: Added metrics basics endpoint and dashboard improvements (pagination + chart rendering).
 - 2026-04-02: Added end-to-end integration test for register -> assign -> verify -> follow-up flow.
+- 2026-04-02: Added bot `/followup` command and solved-response IDs for complete follow-up loop.
+- 2026-04-02: Added profile lookup by Codeforces handle for API and dashboard UX.
 
 ## 17) Local Runbook (One-Machine Setup)
 
@@ -588,11 +590,10 @@ pytest -q
 ## 16) Immediate Next Step (What We Should Build Next)
 
 Move to Phase 5 completion in this order:
-1. Add user-friendly dashboard controls for selecting user handles (not UUID only).
-2. Add chart legends and dual-series comparison (XP + rating trend toggle persistence).
-3. Add frontend error/retry UX patterns and empty-state cards.
+1. Add chart legends and dual-series comparison (XP + rating trend toggle persistence).
+2. Add frontend error/retry UX patterns and empty-state cards.
 
 Then complete Phase 6:
-1. Add core-flow integration tests covering register -> assign -> solve -> follow-up.
-2. Add structured JSON log option (env-controlled) for production ingestion.
-3. Finalize docker runbook and one-command local startup docs.
+1. Add multi-user integration tests with negative/error path assertions.
+2. Add opt-in request sampling for logs and metrics cardinality guardrails.
+3. Finalize docker runbook with backend + bot launch profile.

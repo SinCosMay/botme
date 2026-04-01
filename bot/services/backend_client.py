@@ -86,6 +86,20 @@ class BackendClient:
     async def profile(self, discord_id: str) -> dict:
         return await self._request("GET", f"/v1/users/{discord_id}/profile")
 
+    async def profile_by_handle(self, cf_handle: str) -> dict:
+        return await self._request("GET", f"/v1/users/handle/{cf_handle}/profile")
+
+    async def answer_followup(self, submission_id: str, question_id: str, answer: str) -> dict:
+        return await self._request(
+            "POST",
+            "/v1/followup/answer",
+            json={
+                "submission_id": submission_id,
+                "question_id": question_id,
+                "answer": answer,
+            },
+        )
+
     async def leaderboard(self, metric: str = "xp", page: int = 1, limit: int = 10) -> dict:
         return await self._request(
             "GET",

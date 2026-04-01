@@ -9,11 +9,11 @@
 <body>
   <header>
     <h1>Profile Viewer</h1>
-    <p>Enter a user id to fetch profile analytics and time-series data.</p>
+    <p>Enter a user UUID or a Codeforces handle (prefix with @) to fetch analytics.</p>
   </header>
   <main>
     <section class="card">
-      <input id="userId" placeholder="User UUID" style="width:100%;padding:10px;border-radius:10px;border:1px solid #cad9ba;" />
+      <input id="userId" placeholder="User UUID or @cf_handle" style="width:100%;padding:10px;border-radius:10px;border:1px solid #cad9ba;" />
       <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap;">
         <label for="metric">Series</label>
         <select id="metric" style="padding:8px;border-radius:10px;border:1px solid #cad9ba;">
@@ -59,14 +59,23 @@
     }
 
     async function loadData() {
-      const userId = document.getElementById('userId').value.trim();
+      const rawInput = document.getElementById('userId').value.trim();
       const metric = document.getElementById('metric').value;
       const output = document.getElementById('output');
-      if (!userId) {
+      if (!rawInput) {
         output.textContent = 'Enter a user id first.';
         return;
       }
       try {
+        let userId = rawInput;
+        if (rawInput.startsWith('@')) {
+          const handle = rawInput.slice(1);
+          const handleRes = await fetch(`/v1/users/handle/${handle}/profile`);
+          if (!handleRes.ok) throw new Error('Handle not found');
+          const handleProfile = await handleRes.json();
+          userId = handleProfile.id;
+        }
+
         const profileRes = await fetch(`/v1/analytics/${userId}?platform=codeforces`);
         const seriesRes = await fetch(`/v1/analytics/${userId}/timeseries?metric=${metric}&days=30`);
         if (!profileRes.ok || !seriesRes.ok) throw new Error('Failed to fetch profile payloads');

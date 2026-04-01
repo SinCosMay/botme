@@ -36,3 +36,11 @@ def get_profile(discord_id: str, db: Session = Depends(get_db_session)) -> User:
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return user
+
+
+@router.get("/handle/{cf_handle}/profile", response_model=UserProfileResponse)
+def get_profile_by_handle(cf_handle: str, db: Session = Depends(get_db_session)) -> User:
+    user = db.query(User).filter(User.cf_handle == cf_handle).one_or_none()
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
