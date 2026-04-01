@@ -85,3 +85,9 @@ class BackendClient:
 
     async def profile(self, discord_id: str) -> dict:
         return await self._request("GET", f"/v1/users/{discord_id}/profile")
+
+    async def leaderboard(self, metric: str = "xp", page: int = 1, limit: int = 10) -> dict:
+        return await self._request(
+            "GET",
+            f"/v1/analytics/leaderboard?metric={metric}&page={page}&limit={limit}",
+        )

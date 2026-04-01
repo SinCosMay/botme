@@ -4,6 +4,7 @@ from discord.ext import commands
 
 from bot.commands import lc_company as lc_company_cmd
 from bot.commands import lc_solved as lc_solved_cmd
+from bot.commands import leaderboard as leaderboard_cmd
 from bot.commands import problem as problem_cmd
 from bot.commands import profile as profile_cmd
 from bot.commands import register as register_cmd
@@ -97,6 +98,21 @@ async def profile(interaction: discord.Interaction) -> None:
         await interaction.followup.send(message)
     except BackendClientError as exc:  # pragma: no cover
         await interaction.followup.send(f"Profile failed: {exc.message}")
+
+
+@bot.tree.command(name="leaderboard", description="Show top users by XP or rating")
+@app_commands.describe(metric="xp|rating", limit="number of rows (1-20)")
+async def leaderboard(
+    interaction: discord.Interaction,
+    metric: str = "xp",
+    limit: int = 10,
+) -> None:
+    await interaction.response.defer(thinking=True)
+    try:
+        message = await leaderboard_cmd.run(client, metric=metric, limit=max(1, min(limit, 20)))
+        await interaction.followup.send(message)
+    except BackendClientError as exc:  # pragma: no cover
+        await interaction.followup.send(f"Leaderboard failed: {exc.message}")
 
 
 if __name__ == "__main__":

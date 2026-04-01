@@ -1,4 +1,10 @@
-from app.schemas.analytics import PlatformAnalyticsResponse
+from app.schemas.analytics import (
+    LeaderboardEntry,
+    LeaderboardResponse,
+    PlatformAnalyticsResponse,
+    TimeSeriesPoint,
+    UserTimeSeriesResponse,
+)
 from app.schemas.followup import FollowupAnswerRequest, FollowupAnswerResponse
 from app.schemas.leetcode import (
     LeetCodeAssignRequest,
@@ -22,6 +28,10 @@ __all__ = [
     "SubmissionVerifyRequest",
     "SubmissionResultResponse",
     "PlatformAnalyticsResponse",
+    "LeaderboardEntry",
+    "LeaderboardResponse",
+    "TimeSeriesPoint",
+    "UserTimeSeriesResponse",
     "FollowupAnswerRequest",
     "FollowupAnswerResponse",
 ]
