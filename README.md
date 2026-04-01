@@ -481,7 +481,7 @@ Use this section as the single source of truth.
 - [x] Phase 0 complete
 - [x] Phase 1 complete
 - [x] Phase 1.5 complete
-- [~] Phase 2 in progress
+- [x] Phase 2 complete
 - [ ] Phase 3 complete
 - [ ] Phase 4 complete
 - [ ] Phase 5 complete
@@ -499,13 +499,14 @@ Planned tasks:
 - [x] Update XP, rating, level, and platform solved counters
 - [x] Add streak progression logic in solve recording
 - [x] Add `rating_history` and `xp_history` persistence
-- [ ] Add API tests for `/v1/submissions/verify` with mocked CF responses
+- [x] Add API tests for `/v1/submissions/verify` with mocked CF responses
 
 ### Changelog
 
 - 2026-04-01: Initial roadmap README created.
 - 2026-04-01: Added Phase 0 progress snapshot and updated tracker to reflect current codebase status.
 - 2026-04-02: Updated status to reflect completed Phase 1/1.5 and in-progress Phase 2 implementation, including solve verification and streak logic.
+- 2026-04-02: Completed remaining Phase 2 hardening (mocked verify endpoint tests, bot command module wiring, backend error mapping).
 
 ## 15) Suggested Milestone Branch Strategy
 
@@ -522,9 +523,12 @@ Planned tasks:
 ## 16) Immediate Next Step (What We Should Build Next)
 
 Complete Phase 2 in this order:
-1. Add endpoint-level tests for `/v1/submissions/verify` using mocked Codeforces responses.
-2. Add `/solved` command module wiring in `bot/commands/` to match bot main command behavior.
-3. Add strict error mapping in bot client for common backend response codes.
-4. Mark Phase 2 complete and open Phase 3 branch.
+Phase 2 is complete.
+
+Move to Phase 3 in this order:
+1. Add `followup_questions` and `followup_attempts` models + migration.
+2. Build follow-up generation/selection service using problem tags and difficulty.
+3. Add endpoint for follow-up answer validation with bonus XP awarding.
+4. Wire Discord follow-up command flow.
 
 After these are complete, move directly to Phase 3 (follow-up question engine).
