@@ -1,135 +1,129 @@
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
-from typing import Annotated
+import logging
+from random import random
+import time
+from pathlib import Path
+from uuid import uuid4
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Response
-from pydantic import BaseModel
-from sqlalchemy import Column, DateTime, Integer, String, create_engine, select
-from sqlalchemy.orm import Session, declarative_base, sessionmaker
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
+from app.api.v1.router import router as v1_router
+from app.core.config import settings
+from app.core.logging import configure_logging
+from app.jobs.scheduler import start_scheduler, stop_scheduler
 
-Base = declarative_base()
-
-
-class Campaign(Base):
-    __tablename__ = "campaigns"
-
-    campaign_id = Column(Integer, primary_key=True, autoincrement=True)
-    name        = Column(String, nullable=False, index=True)
-    due_date    = Column(DateTime(timezone=True), nullable=True, index=True)
-    created_at  = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
-
-DATABASE_URL = "sqlite:///database.db"
-
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False}
-)
-
-SessionLocal = sessionmaker(
-    bind=engine,
-    autoflush=False,
-    autocommit=False
-)
-
-
-def create_db_and_tables():
-    Base.metadata.create_all(bind=engine)
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-SessionDep = Annotated[Session, Depends(get_db)]
+configure_logging(level=settings.LOG_LEVEL, json_logs=settings.LOG_JSON)
+logger = logging.getLogger(__name__)
+WEB_DIR = Path(__file__).resolve().parent / "web"
+HAS_WEB_DIR = WEB_DIR.exists() and WEB_DIR.is_dir()
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
-    create_db_and_tables()
-    with Session(engine) as session:
-        if not session.execute(select(Campaign)).scalars().first():  
-            session.add_all([
-                Campaign(name="Summer Launch", due_date=datetime.now(timezone.utc)),
-                Campaign(name="Black Friday", due_date=datetime.now(timezone.utc))
-            ])
-            session.commit()
-    yield
-
-app = FastAPI(root_path="/api/v1",lifespan=lifespan)
-
-
-class CampaignRead(BaseModel):
-    campaign_id: int
-    name: str
-    due_date: datetime | None
-    created_at: datetime | None
-
-    model_config = {"from_attributes": True}
+async def lifespan(_: FastAPI):
+    app.state.metrics = {
+        "requests_total": 0,
+        "requests_error_total": 0,
+        "request_duration_ms_sum": 0.0,
+        "request_duration_ms_avg": 0.0,
+        "path_counts": {},
+    }
+    if settings.ENABLE_SCHEDULER:
+        start_scheduler()
+    try:
+        yield
+    finally:
+        if settings.ENABLE_SCHEDULER:
+            stop_scheduler()
 
 
-class CampaignCreate(BaseModel):
-    name: str
-    due_date: datetime | None = None
+app = FastAPI(title="BotMe API", version="0.1.0", lifespan=lifespan)
+
+frontend_origins = [origin.strip() for origin in settings.FRONTEND_ORIGINS.split(",") if origin.strip()]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=frontend_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(v1_router, prefix="/v1")
+if HAS_WEB_DIR:
+    app.mount("/dashboard/static", StaticFiles(directory=str(WEB_DIR)), name="dashboard-static")
 
 
-@app.get("/campaigns", response_model=list[CampaignRead])
-async def read_campaign(
-    db: SessionDep,
-    page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
-):
-    limit = page_size
-    offset = (page - 1) * limit
-    data = db.execute(
-        select(Campaign)
-        .order_by(Campaign.campaign_id)
-        .offset(offset)
-        .limit(limit)
-    ).scalars().all()
-    return data
+@app.middleware("http")
+async def request_tracing_middleware(request, call_next):
+    request_id = str(uuid4())
+    start = time.perf_counter()
+    response = await call_next(request)
+    elapsed_ms = (time.perf_counter() - start) * 1000
 
-
-@app.get("/campaigns/{id}", response_model=CampaignRead)
-async def get_campaign(id: int, db: SessionDep):
-    data = db.get(Campaign, id)
-    if not data:
-        raise HTTPException(status_code=404, detail="Campaign not found")
-    return data
-
-
-
-@app.post("/campaigns", response_model=CampaignRead, status_code=201)
-async def create_campaign(body: CampaignCreate, db: SessionDep):
-    new = Campaign(
-        name=body.name,
-        due_date=body.due_date
+    metrics_state = app.state.metrics
+    metrics_state["requests_total"] += 1
+    metrics_state["request_duration_ms_sum"] += elapsed_ms
+    metrics_state["request_duration_ms_avg"] = (
+        metrics_state["request_duration_ms_sum"] / metrics_state["requests_total"]
     )
-    db.add(new)
-    db.commit()
-    db.refresh(new)
-    return new
+
+    path = request.url.path
+    path_counts = metrics_state["path_counts"]
+    if path in path_counts:
+        path_counts[path] += 1
+    elif len(path_counts) < max(1, settings.METRICS_PATH_BUCKET_LIMIT):
+        path_counts[path] = 1
+    else:
+        path_counts["_other"] = path_counts.get("_other", 0) + 1
+
+    if response.status_code >= 400:
+        metrics_state["requests_error_total"] += 1
+
+    response.headers["X-Request-ID"] = request_id
+    if random() <= max(0.0, min(settings.LOG_SAMPLE_RATE, 1.0)):
+        logger.info(
+            "request_id=%s method=%s path=%s status=%s duration_ms=%.2f",
+            request_id,
+            request.method,
+            request.url.path,
+            response.status_code,
+            elapsed_ms,
+        )
+    return response
 
 
-
-@app.put("/campaigns/{id}", status_code=200, response_model=CampaignRead)
-async def update_campaign(id: int, body: CampaignCreate, db: SessionDep):
-    data = db.get(Campaign, id)
-    if not data:
-        raise HTTPException(status_code=404, detail="Campaign not found")
-    data.name = body.name
-    data.due_date = body.due_date
-    db.commit()
-    db.refresh(data)
-    return data
+@app.get("/")
+def root() -> dict[str, str]:
+    return {"status": "ok", "service": "botme-backend"}
 
 
-@app.delete("/campaigns/{id}", status_code=204)
-async def delete_campaign(id: int, db: SessionDep):
-    data = db.get(Campaign, id)
-    if not data:
-        raise HTTPException(status_code=404, detail="Campaign not found")
-    db.delete(data)
-    db.commit()
-    return Response(status_code=204)
+@app.get("/dashboard")
+def dashboard_home():
+    if not HAS_WEB_DIR:
+        return JSONResponse(
+            status_code=404,
+            content={"detail": "Dashboard files are not present in backend/app/web. Use frontend dev server."},
+        )
+    return FileResponse(WEB_DIR / "index.html")
+
+
+@app.get("/dashboard/leaderboard")
+def dashboard_leaderboard():
+    if not HAS_WEB_DIR:
+        return JSONResponse(
+            status_code=404,
+            content={"detail": "Dashboard files are not present in backend/app/web. Use frontend dev server."},
+        )
+    return FileResponse(WEB_DIR / "leaderboard.html")
+
+
+@app.get("/dashboard/profile")
+def dashboard_profile():
+    if not HAS_WEB_DIR:
+        return JSONResponse(
+            status_code=404,
+            content={"detail": "Dashboard files are not present in backend/app/web. Use frontend dev server."},
+        )
+    return FileResponse(WEB_DIR / "profile.html")
