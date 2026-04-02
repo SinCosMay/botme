@@ -715,6 +715,24 @@ body {
   margin-bottom: 1.75rem;
 }
 
+.profile-auth {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.profile-auth .input-styled {
+  min-width: min(460px, 100%);
+  flex: 1;
+}
+
+.session-hint {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-bottom: 1.35rem;
+}
+
 .input-styled {
   flex: 1;
   background: var(--bg-surface);

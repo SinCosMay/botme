@@ -1,12 +1,14 @@
 import './style.css'
 import { homePage } from './pages/home.js'
 import { leaderboardPage } from './pages/leaderboard.js'
-import { profilePage } from './pages/profile.js'
+import { myProfilePage, searchProfilesPage } from './pages/profile.js'
 
 const routes = {
   '/': homePage,
   '/leaderboard': leaderboardPage,
-  '/profile': profilePage,
+  '/profile': myProfilePage,
+  '/my-profile': myProfilePage,
+  '/search': searchProfilesPage,
 }
 
 const content = document.getElementById('page-content')

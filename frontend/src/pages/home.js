@@ -21,8 +21,11 @@ export function homePage() {
         <a href="#/leaderboard" class="btn-primary" data-link>
           🏆 Leaderboard
         </a>
-        <a href="#/profile" class="btn-ghost" data-link>
+        <a href="#/my-profile" class="btn-ghost" data-link>
           👤 My Profile
+        </a>
+        <a href="#/search" class="btn-ghost" data-link>
+          🔎 Search Profiles
         </a>
       </div>
 
