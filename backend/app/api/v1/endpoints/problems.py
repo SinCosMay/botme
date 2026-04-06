@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db_session
+from app.models.problem import Problem
 from app.schemas.leetcode import LeetCodeAssignRequest
 from app.schemas.problem import AssignedProblemResponse, ProblemAssignRequest
 from app.services.assignment_service import (
@@ -27,7 +28,7 @@ def _as_response(assignment_id: str, problem) -> AssignedProblemResponse:
 
 
 @router.post("/assign", response_model=AssignedProblemResponse)
-def assign_problem(payload: ProblemAssignRequest, db: Session = Depends(get_db_session)) -> AssignedProblemResponse:
+async def assign_problem(payload: ProblemAssignRequest, db: Session = Depends(get_db_session)) -> AssignedProblemResponse:
     user = get_user_by_discord_id(db, payload.discord_id)
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -42,7 +43,25 @@ def assign_problem(payload: ProblemAssignRequest, db: Session = Depends(get_db_s
             max_rating=payload.max_rating,
         )
     except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        # On fresh deployments, Codeforces tables may be empty.
+        cf_problem_count = db.query(Problem).filter(Problem.platform == "codeforces").count()
+        if cf_problem_count == 0:
+            try:
+                await sync_problemset(db, limit=None)
+                assignment, problem = assign_codeforces_problem(
+                    db,
+                    user=user,
+                    mode=payload.mode,
+                    tag=payload.tag,
+                    min_rating=payload.min_rating,
+                    max_rating=payload.max_rating,
+                )
+            except ValueError as second_exc:
+                raise HTTPException(status_code=404, detail=str(second_exc)) from second_exc
+            except Exception as sync_exc:  # pragma: no cover
+                raise HTTPException(status_code=502, detail="Failed to sync Codeforces problemset") from sync_exc
+        else:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     return _as_response(assignment.id, problem)
 
