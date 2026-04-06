@@ -1,3 +1,5 @@
+import discord
+
 from bot.services.backend_client import BackendClient
 
 
@@ -8,7 +10,7 @@ async def run(
     tag: str | None = None,
     min_rating: int | None = None,
     max_rating: int | None = None,
-) -> str:
+) -> discord.Embed:
     data = await client.assign_problem(
         discord_id,
         mode=mode,
@@ -18,6 +20,14 @@ async def run(
     )
     rating = data.get("rating")
     tags = data.get("tags") or []
-    rating_text = f" | rating: {rating}" if rating is not None else ""
-    tags_text = f" | tags: {', '.join(tags[:5])}" if tags else ""
-    return f"Assigned: {data['name']} ({data['url']}){rating_text}{tags_text}"
+    embed = discord.Embed(
+        title="Float Problem Assignment",
+        description=f"**{data['name']}**\n{data['url']}",
+        color=discord.Color.blue(),
+    )
+    embed.add_field(name="Platform", value=str(data.get("platform", "codeforces")).title(), inline=True)
+    embed.add_field(name="Mode", value=mode.title(), inline=True)
+    embed.add_field(name="Rating", value=str(rating) if rating is not None else "N/A", inline=True)
+    if tags:
+        embed.add_field(name="Tags", value=", ".join(tags[:6]), inline=False)
+    return embed

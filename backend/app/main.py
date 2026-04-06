@@ -38,7 +38,7 @@ async def lifespan(_: FastAPI):
             stop_scheduler()
 
 
-app = FastAPI(title="BotMe API", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="Float API", version="0.1.0", lifespan=lifespan)
 
 frontend_origins = [origin.strip() for origin in settings.FRONTEND_ORIGINS.split(",") if origin.strip()]
 
@@ -62,6 +62,14 @@ async def request_tracing_middleware(request, call_next):
     response = await call_next(request)
     elapsed_ms = (time.perf_counter() - start) * 1000
 
+    if not hasattr(app.state, "metrics"):
+        app.state.metrics = {
+            "requests_total": 0,
+            "requests_error_total": 0,
+            "request_duration_ms_sum": 0.0,
+            "request_duration_ms_avg": 0.0,
+            "path_counts": {},
+        }
     metrics_state = app.state.metrics
     metrics_state["requests_total"] += 1
     metrics_state["request_duration_ms_sum"] += elapsed_ms
@@ -96,7 +104,7 @@ async def request_tracing_middleware(request, call_next):
 
 @app.get("/")
 def root() -> dict[str, str]:
-    return {"status": "ok", "service": "botme-backend"}
+    return {"status": "ok", "service": "float-backend"}
 
 
 @app.get("/dashboard")

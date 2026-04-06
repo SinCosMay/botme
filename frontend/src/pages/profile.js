@@ -4,7 +4,7 @@ import { Chart, LineController, LineElement, PointElement, LinearScale, TimeScal
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, TimeScale, Filler, Tooltip, Legend)
 
 let chartInstance = null
-const SESSION_DISCORD_ID_KEY = 'botme.session.discordId'
+const SESSION_DISCORD_ID_KEY = 'float.session.discordId'
 
 export function myProfilePage() {
   return buildProfilePage('self')

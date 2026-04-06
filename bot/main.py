@@ -1,10 +1,12 @@
 import discord
 from discord import app_commands
 from discord.ext import commands
+import time
 
 from bot.commands import lc_company as lc_company_cmd
 from bot.commands import lc_solved as lc_solved_cmd
 from bot.commands import followup as followup_cmd
+from bot.commands import help as help_cmd
 from bot.commands import leaderboard as leaderboard_cmd
 from bot.commands import problem as problem_cmd
 from bot.commands import profile as profile_cmd
@@ -17,15 +19,49 @@ client = BackendClient(settings.API_URL)
 intents = discord.Intents.default()
 bot = commands.Bot(command_prefix="/", intents=intents)
 
-GUILD_ID = 740102523716763668
+
+def _get_local_command_names() -> list[str]:
+    return [cmd.name for cmd in bot.tree.get_commands(guild=None)]
+
+
+async def _clear_remote_global_commands() -> int:
+    app_id = bot.application_id
+    if app_id is None:
+        app_info = await bot.application_info()
+        app_id = app_info.id
+
+    existing_global = await bot.http.get_global_commands(app_id)
+    for command in existing_global:
+        command_id = int(command["id"])
+        await bot.http.delete_global_command(app_id, command_id)
+    return len(existing_global)
 
 @bot.event
 async def on_ready() -> None:
-    guild = discord.Object(id=GUILD_ID)
-    bot.tree.copy_global_to(guild=guild)
-    synced = await bot.tree.sync(guild=guild)
+    local_names = _get_local_command_names()
+    if len(local_names) != len(set(local_names)):
+        duplicates = sorted({name for name in local_names if local_names.count(name) > 1})
+        print(f"Duplicate local slash command names detected: {duplicates}")
 
-    print(f"Synced {len(synced)} commands to guild")
+    if settings.DISCORD_SYNC_GUILD_ONLY and settings.DISCORD_GUILD_ID:
+        guild = discord.Object(id=settings.DISCORD_GUILD_ID)
+
+        # Clear stale remote global registrations to avoid duplicate slash entries.
+        if settings.DISCORD_CLEAR_GLOBAL_WHEN_GUILD_SYNC:
+            try:
+                cleared_count = await _clear_remote_global_commands()
+                print(f"Cleared {cleared_count} stale global commands")
+            except Exception as exc:  # pragma: no cover
+                print(f"Failed to clear stale global commands: {exc}")
+
+        bot.tree.clear_commands(guild=guild)
+        bot.tree.copy_global_to(guild=guild)
+        synced = await bot.tree.sync(guild=guild)
+        print(f"Synced {len(synced)} commands to guild {settings.DISCORD_GUILD_ID}")
+    else:
+        synced = await bot.tree.sync()
+        print(f"Synced {len(synced)} global commands")
+
     print(f"Bot ready as {bot.user}")
 
 
@@ -34,8 +70,8 @@ async def on_ready() -> None:
 async def register(interaction: discord.Interaction, cf_handle: str) -> None:
     await interaction.response.defer(thinking=True)
     try:
-        message = await register_cmd.run(client, str(interaction.user.id), cf_handle)
-        await interaction.followup.send(message)
+        embed = await register_cmd.run(client, str(interaction.user.id), cf_handle)
+        await interaction.followup.send(embed=embed)
     except BackendClientError as exc:  # pragma: no cover
         await interaction.followup.send(f"Register failed: {exc.message}")
 
@@ -66,7 +102,7 @@ async def problem(
             await interaction.followup.send("Assignment failed: min_rating cannot be greater than max_rating")
             return
 
-        message = await problem_cmd.run(
+        embed = await problem_cmd.run(
             client,
             str(interaction.user.id),
             mode=resolved_mode,
@@ -74,20 +110,26 @@ async def problem(
             min_rating=min_rating,
             max_rating=max_rating,
         )
-        await interaction.followup.send(message)
+        await interaction.followup.send(embed=embed)
     except BackendClientError as exc:  # pragma: no cover
         await interaction.followup.send(f"Assignment failed: {exc.message}")
 
 
-@bot.tree.command(name="lc_company", description="Get a LeetCode company-wise problem")
-@app_commands.describe(company="Company name", difficulty="easy|medium|hard")
-async def lc_company(interaction: discord.Interaction, company: str, difficulty: str | None = None) -> None:
+@bot.tree.command(name="lc_company", description="Get a LeetCode company-wise problem from all-time CSV")
+@app_commands.describe(
+    company="Company name",
+    topic="Optional topic to filter (example: graph, dp)",
+    difficulty="easy|medium|hard",
+)
+async def lc_company(
+    interaction: discord.Interaction,
+    company: str,
+    topic: str | None = None,
+    difficulty: str | None = None,
+) -> None:
     await interaction.response.defer(thinking=True)
-    try:
-        message = await lc_company_cmd.run(client, str(interaction.user.id), company, difficulty)
-        await interaction.followup.send(message)
-    except BackendClientError as exc:  # pragma: no cover
-        await interaction.followup.send(f"LeetCode assign failed: {exc.message}")
+    embed = await lc_company_cmd.run(client, str(interaction.user.id), company, topic, difficulty)
+    await interaction.followup.send(embed=embed)
 
 
 @bot.tree.command(name="lc_solved", description="Mark assigned LeetCode problem solved")
@@ -95,8 +137,8 @@ async def lc_company(interaction: discord.Interaction, company: str, difficulty:
 async def lc_solved(interaction: discord.Interaction, slug: str, proof_url: str | None = None) -> None:
     await interaction.response.defer(thinking=True)
     try:
-        message = await lc_solved_cmd.run(client, str(interaction.user.id), slug, proof_url)
-        await interaction.followup.send(message)
+        embed = await lc_solved_cmd.run(client, str(interaction.user.id), slug, proof_url)
+        await interaction.followup.send(embed=embed)
     except BackendClientError as exc:  # pragma: no cover
         await interaction.followup.send(f"LeetCode solve failed: {exc.message}")
 
@@ -150,6 +192,28 @@ async def followup(
         await interaction.followup.send(message)
     except BackendClientError as exc:  # pragma: no cover
         await interaction.followup.send(f"Follow-up failed: {exc.message}")
+
+
+@bot.tree.command(name="help", description="Show Float commands and what they do")
+async def help_command(interaction: discord.Interaction) -> None:
+    embed = help_cmd.run()
+    await interaction.response.send_message(embed=embed)
+
+
+@bot.tree.command(name="ping", description="Check bot latency")
+async def ping(interaction: discord.Interaction) -> None:
+    started = time.perf_counter()
+    await interaction.response.defer(thinking=True)
+    elapsed_ms = (time.perf_counter() - started) * 1000
+    websocket_ms = bot.latency * 1000
+
+    embed = discord.Embed(
+        title="Float Ping",
+        color=discord.Color.green(),
+    )
+    embed.add_field(name="Gateway", value=f"{websocket_ms:.2f} ms", inline=True)
+    embed.add_field(name="Command", value=f"{elapsed_ms:.2f} ms", inline=True)
+    await interaction.followup.send(embed=embed)
 
 
 if __name__ == "__main__":

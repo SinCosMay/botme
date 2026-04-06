@@ -1,90 +1,99 @@
-# BotMe
+# Float
 
-BotMe is a Discord-first coding practice bot with a FastAPI backend and a lightweight web dashboard.
-It helps users practice Codeforces consistently, track progress, compete on leaderboards, and run an optional LeetCode company-wise practice flow.
+Float is a Discord coding practice bot for competitive programming and interview prep.
+It combines a Discord-first command experience, a FastAPI backend, and a lightweight web dashboard to help users practice consistently and track measurable progress.
 
-## Highlights
+## What Float Does
 
-- Slash-command workflow for daily problem solving.
-- Automatic Codeforces solve verification against assignment time.
-- XP, level, rating, and streak progression.
-- Follow-up concept questions after verified solves.
-- Leaderboard and profile views in Discord.
-- Optional LeetCode company-wise assignment and solve tracking.
-- REST API + test suite + Dockerized local Postgres/Redis.
+- Assigns Codeforces problems by mode: random, topic, or rating range.
+- Verifies solves against Codeforces submissions after assignment time.
+- Updates XP, rating, level, and streak automatically.
+- Asks follow-up concept questions after verified solves.
+- Tracks optional LeetCode company-wise practice separately.
+- Shows live profile and leaderboard data in Discord.
+- Exposes analytics APIs for dashboard charts and comparisons.
 
-## Core User Experience
+## Command Reference
 
-1. Register your Codeforces handle from Discord.
-2. Request a problem (random, by topic, or by rating range).
-3. Submit `/solved` when done.
-4. Bot verifies accepted submission through Codeforces API.
-5. XP/rating/streak update and a follow-up question is generated.
-6. View progress using `/profile` and `/leaderboard`.
-
-## Discord Commands
-
-| Command | Purpose |
+| Command | Description |
 |---|---|
-| `/register <cf_handle>` | Link Discord account to Codeforces handle |
-| `/problem [mode] [topic] [min_rating] [max_rating]` | Assign a Codeforces problem |
-| `/solved` | Verify latest active Codeforces assignment |
+| `/register <cf_handle>` | Link your Discord account to a Codeforces handle |
+| `/problem [mode] [topic] [min_rating] [max_rating]` | Get a Codeforces assignment |
+| `/solved` | Verify your latest active Codeforces assignment |
 | `/followup <submission_id> <question_id> <answer>` | Submit follow-up answer for bonus XP |
-| `/profile` | Show your current profile stats |
-| `/leaderboard [metric] [limit]` | Show ranking by XP or rating |
-| `/lc_company <company> [topic] [difficulty]` | Assign a LeetCode problem by company |
-| `/lc_solved <slug> [proof_url]` | Mark assigned LeetCode problem solved |
+| `/profile` | View your current progress profile |
+| `/leaderboard [metric] [limit]` | View top users by XP or rating |
+| `/lc_company <company> [topic] [difficulty]` | Get a LeetCode company-wise assignment |
+| `/lc_solved <slug> [proof_url]` | Mark LeetCode assignment solved |
+| `/help` | Show command overview |
+| `/ping` | Show bot latency |
+
+## Architecture
+
+```text
+Discord User
+   |
+   v
+Discord Bot (slash commands)
+   |
+   v
+FastAPI Backend
+   |-- PostgreSQL (users, assignments, submissions, history)
+   |-- Redis (cache and performance layer)
+   |-- Codeforces API (verification + problem sync)
+   |
+   v
+Frontend Dashboard (profile + leaderboard + charts)
+```
 
 ## Tech Stack
 
 - Backend: FastAPI, SQLAlchemy, Alembic, Redis
 - Bot: discord.py
-- Frontend: Vite + vanilla JS + Chart.js
+- Frontend: Vite, vanilla JavaScript, Chart.js
 - Database: PostgreSQL
-- Tests: pytest
+- Testing: pytest
 
 ## Repository Layout
 
 ```text
-backend/   FastAPI app, services, models, migrations, tests
-bot/       Discord slash command bot
-frontend/  Dashboard app (home, leaderboard, profile)
-scripts/   Data sync/import scripts
-shared/    Shared enums/constants/types
+backend/   FastAPI app, models, services, migrations, tests
+bot/       Discord slash-command bot
+frontend/  Dashboard application
+scripts/   Data sync and import scripts
+shared/    Shared constants and types
 ```
 
-## Quick Start (Local)
+## Quick Start
 
 ### 1) Prerequisites
 
 - Python 3.11+
 - Node.js 18+
 - Docker + Docker Compose
-- A Discord bot token
+- Discord bot token
 
-### 2) Environment
-
-Copy and edit environment variables:
+### 2) Configure Environment
 
 ```powershell
 Copy-Item .env.example .env
 Copy-Item backend/.env.example backend/.env
 ```
 
-Minimum required values in `.env`:
+Required environment values:
 
 - `DISCORD_TOKEN`
-- `DATABASE_URL` (or `POSTGRES_*` vars)
+- `DATABASE_URL` (or `POSTGRES_*` values)
 - `REDIS_URL`
 - `API_URL`
 
-### 3) Start infrastructure
+### 3) Start Infrastructure
 
 ```powershell
 docker compose up -d
 ```
 
-### 4) Install dependencies
+### 4) Install Dependencies
 
 ```powershell
 python -m venv venv
@@ -96,7 +105,7 @@ npm install
 Pop-Location
 ```
 
-### 5) Run migrations
+### 5) Apply Database Migrations
 
 ```powershell
 Push-Location backend
@@ -104,29 +113,29 @@ alembic upgrade head
 Pop-Location
 ```
 
-### 6) Run services
+### 6) Run Services
 
-Terminal A (backend):
+Backend:
 
 ```powershell
 Push-Location backend
 uvicorn app.main:app --reload --port 8000
 ```
 
-Terminal B (bot):
+Bot:
 
 ```powershell
 python -m bot.main
 ```
 
-Terminal C (frontend):
+Frontend:
 
 ```powershell
 Push-Location frontend
 npm run dev
 ```
 
-## API Overview
+## API Surface
 
 - `GET /v1/health`
 - `GET /v1/ready`
@@ -145,15 +154,15 @@ npm run dev
 - `POST /v1/leetcode/import/company-problems`
 - `POST /v1/leetcode/assign`
 
-## Data Operations
+## Data Utilities
 
-Sync Codeforces problems:
+Sync Codeforces problemset:
 
 ```powershell
 python scripts/sync_codeforces.py --limit 3000
 ```
 
-Import LeetCode company-wise dataset:
+Import LeetCode company-wise data:
 
 ```powershell
 python scripts/import_leetcode_company.py --input path/to/company_problems.json
@@ -161,41 +170,12 @@ python scripts/import_leetcode_company.py --input path/to/company_problems.json
 
 ## Testing
 
-Run full backend tests:
-
 ```powershell
 Push-Location backend
 pytest -q
 ```
 
-## Status
-
-### Implemented
-
-- User registration and Codeforces handle validation.
-- Codeforces assignment modes (random/topic/rating).
-- Codeforces solve verification and duplicate protection.
-- XP/rating/level/streak updates with history tracking.
-- Follow-up question generation and answer scoring.
-- Analytics leaderboard with Redis caching.
-- Discord slash command integration for the core flow.
-- Optional LeetCode company-wise assignment and solve tracking.
-- Basic dashboard pages for home, leaderboard, and profile.
-- Observability endpoints (`/v1/metrics`) and request tracing.
-
-### Pending / In Progress
-
-- Rich embed formatting for commands beyond profile and leaderboard.
-- Expanded dashboard UX and deeper analytics visualizations.
-- Stronger production hardening (rate limits, retries, deployment templates).
-- Extended command modules (help, streak, lc_profile) wired into slash tree.
-
 ## Contributing
 
 Issues and pull requests are welcome.
-For major feature changes, open an issue first so implementation details can be aligned before coding.
-
-## License
-
-No license file is currently declared in this repository.
-Add a license before publishing or accepting broad external contributions.
+For major changes, open an issue first so implementation details can be aligned before coding.

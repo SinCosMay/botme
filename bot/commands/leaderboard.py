@@ -16,10 +16,11 @@ def _rank_prefix(rank: int) -> str:
 async def run(client: BackendClient, metric: str = "xp", limit: int = 10) -> discord.Embed:
 	data = await client.leaderboard(metric=metric, page=1, limit=limit)
 	entries = data.get("entries", [])
-	metric_name = str(data.get("metric", metric)).upper()
+	metric_key = str(data.get("metric", metric)).strip().lower()
+	metric_name = metric_key.upper()
 
 	embed = discord.Embed(
-		title=f"BotMe Leaderboard - {metric_name}",
+		title=f"Float Leaderboard - {metric_name}",
 		color=discord.Color.gold(),
 	)
 	if not entries:
@@ -31,13 +32,18 @@ async def run(client: BackendClient, metric: str = "xp", limit: int = 10) -> dis
 	for row in entries:
 		rank = int(row["rank"])
 		prefix = _rank_prefix(rank)
-		lines.append(
-			f"{prefix} **{row['cf_handle']}** - XP `{row['xp']:,}` - Rating `{row['rating']}` - Lv `{row['level']}`"
-		)
+		if metric_key == "rating":
+			value_text = f"Rating `{row['rating']}`"
+		else:
+			value_text = f"XP `{row['xp']:,}`"
+		lines.append(f"{prefix} **{row['cf_handle']}**\n{value_text}  |  Lv `{row['level']}`")
 
 	embed.description = "\n".join(lines)
-	embed.add_field(name="Metric", value=metric_name, inline=True)
-	embed.add_field(name="Showing", value=str(len(entries)), inline=True)
-	embed.add_field(name="Total Users", value=str(data.get("total", len(entries))), inline=True)
-	embed.set_footer(text=f"Page {data.get('page', 1)} | Limit {data.get('limit', limit)}")
+	embed.set_footer(
+		text=(
+			f"Metric {metric_name} | Showing {len(entries)} | "
+			f"Total {data.get('total', len(entries))} | "
+			f"Page {data.get('page', 1)}"
+		)
+	)
 	return embed

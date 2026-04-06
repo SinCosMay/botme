@@ -15,5 +15,5 @@ async def run(client: BackendClient, discord_id: str) -> discord.Embed:
     embed.add_field(name="Current Streak", value=f"{data['current_streak']} day(s)", inline=True)
     embed.add_field(name="Longest Streak", value=f"{data['longest_streak']} day(s)", inline=True)
     embed.add_field(name="Linked Handle", value=data["cf_handle"], inline=True)
-    embed.set_footer(text="BotMe Competitive Profile")
+    embed.set_footer(text="Float Competitive Profile")
     return embed
