@@ -9,3 +9,4 @@ venv/
 Thumbs.db
 postgres_data/
 docker-compose.override.yml
+.jpg
