@@ -115,8 +115,8 @@ async def solved(interaction: discord.Interaction) -> None:
 async def profile(interaction: discord.Interaction) -> None:
     await interaction.response.defer(thinking=True)
     try:
-        message = await profile_cmd.run(client, str(interaction.user.id))
-        await interaction.followup.send(message)
+        embed = await profile_cmd.run(client, str(interaction.user.id))
+        await interaction.followup.send(embed=embed)
     except BackendClientError as exc:  # pragma: no cover
         await interaction.followup.send(f"Profile failed: {exc.message}")
 
@@ -130,8 +130,8 @@ async def leaderboard(
 ) -> None:
     await interaction.response.defer(thinking=True)
     try:
-        message = await leaderboard_cmd.run(client, metric=metric, limit=max(1, min(limit, 20)))
-        await interaction.followup.send(message)
+        embed = await leaderboard_cmd.run(client, metric=metric, limit=max(1, min(limit, 20)))
+        await interaction.followup.send(embed=embed)
     except BackendClientError as exc:  # pragma: no cover
         await interaction.followup.send(f"Leaderboard failed: {exc.message}")
 

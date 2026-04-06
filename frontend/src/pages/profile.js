@@ -4,27 +4,55 @@ import { Chart, LineController, LineElement, PointElement, LinearScale, TimeScal
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, TimeScale, Filler, Tooltip, Legend)
 
 let chartInstance = null
+const SESSION_DISCORD_ID_KEY = 'botme.session.discordId'
 
-export function profilePage() {
+export function myProfilePage() {
+  return buildProfilePage('self')
+}
+
+export function searchProfilesPage() {
+  return buildProfilePage('search')
+}
+
+function buildProfilePage(mode) {
+  const isSelfPage = mode === 'self'
   const el = document.createElement('div')
   el.className = 'page'
   el.innerHTML = `
     <div class="page-header">
       <div class="page-eyebrow">Stats & Analytics</div>
-      <h1 class="page-title">Player Profile</h1>
-      <p class="page-sub">Enter a Codeforces handle to view progress charts and stats.</p>
+      <h1 class="page-title">${isSelfPage ? 'Your Profile' : 'Search Profiles'}</h1>
+      <p class="page-sub">${isSelfPage
+        ? 'Enter your Discord ID below to load your stats. Float saves it locally so you only need to do this once.'
+        : 'Enter a Codeforces handle to view another user\'s progress, XP, and rating charts.'}
+      </p>
     </div>
 
-    <div class="profile-search">
-      <input
-        class="input-styled"
-        id="handleInput"
-        placeholder="CF handle  (e.g. tourist)"
-        autocomplete="off"
-        spellcheck="false"
-      />
-      <button class="btn-action" id="loadBtn">Load Profile</button>
-    </div>
+    ${isSelfPage ? `
+      <div class="profile-auth">
+        <input
+          class="input-styled"
+          id="discordInput"
+          placeholder="Discord ID (e.g. 123456789012345678)"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button class="btn-action" id="saveSessionBtn">Sign In</button>
+        <button class="btn-secondary" id="logoutBtn">Clear</button>
+      </div>
+      <div class="session-hint" id="sessionHint">No active session.</div>
+    ` : `
+      <div class="profile-search">
+        <input
+          class="input-styled"
+          id="handleInput"
+          placeholder="CF handle (e.g. tourist)"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button class="btn-action" id="loadBtn">Load Profile</button>
+      </div>
+    `}
 
     <div id="profileResult" style="display:none">
       <div class="tab-list">
@@ -62,61 +90,141 @@ export function profilePage() {
   `
 
   let currentUserId = null
+  let currentUser = null
   let currentDays = 7
   let currentPlatform = 'codeforces'
-
-  const handleInput = el.querySelector('#handleInput')
-  const loadBtn = el.querySelector('#loadBtn')
   const profileResult = el.querySelector('#profileResult')
   const profileEmpty = el.querySelector('#profileEmpty')
 
-  // Enter key
-  handleInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter') loadBtn.click()
-  })
-
-  loadBtn.addEventListener('click', async () => {
-    const handle = handleInput.value.trim()
-    if (!handle) return
-
+  function setEmptyMessage(message) {
     profileResult.style.display = 'none'
+    profileEmpty.style.display = 'flex'
+    el.querySelector('#emptyMsg').textContent = message
+  }
+
+  function clearEmpty() {
     profileEmpty.style.display = 'none'
-    loadBtn.disabled = true
-    loadBtn.textContent = 'Loading…'
+  }
+
+  async function loadUserProfile(userFetcher) {
+    profileResult.style.display = 'none'
+    clearEmpty()
 
     try {
-      const user = await api.profileByHandle(handle)
+      const user = await userFetcher()
+      currentUser = user
       currentUserId = user.id
       currentPlatform = 'codeforces'
-      
+
+      el.querySelectorAll('[data-platform]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.platform === 'codeforces')
+      })
+
+      const analytics = await api.analytics(user.id, 'codeforces').catch(() => null)
       profileResult.style.display = 'block'
-      renderStats(el, user, null)
+      renderStats(el, user, analytics)
       await loadChart(el, currentUserId, currentDays)
+      return { ok: true }
     } catch (err) {
-      profileEmpty.style.display = 'flex'
-      el.querySelector('#emptyMsg').textContent = err.message.includes('404')
-        ? `No user found for handle "${handle}".`
-        : `Error: ${err.message}`
-    } finally {
+      setEmptyMessage(err.message.includes('404') ? 'User not found.' : `Error: ${err.message}`)
+      return { ok: false, error: err }
+    }
+  }
+
+  if (isSelfPage) {
+    const discordInput = el.querySelector('#discordInput')
+    const saveSessionBtn = el.querySelector('#saveSessionBtn')
+    const logoutBtn = el.querySelector('#logoutBtn')
+    const sessionHint = el.querySelector('#sessionHint')
+
+    function refreshSessionHint(discordId) {
+      sessionHint.textContent = discordId
+        ? `Signed in as Discord ID: ${discordId}`
+        : 'No active session.'
+    }
+
+    async function loadSelf(discordId) {
+      await loadUserProfile(() => api.profileByDiscordId(discordId))
+    }
+
+    const savedDiscordId = localStorage.getItem(SESSION_DISCORD_ID_KEY) || ''
+    discordInput.value = savedDiscordId
+    refreshSessionHint(savedDiscordId)
+
+    if (savedDiscordId) {
+      loadSelf(savedDiscordId)
+    } else {
+      setEmptyMessage('Enter your Discord ID above and hit Sign In to load your profile.')
+    }
+
+    discordInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') saveSessionBtn.click()
+    })
+
+    saveSessionBtn.addEventListener('click', async () => {
+      const discordId = discordInput.value.trim()
+      if (!discordId) {
+        setEmptyMessage('Please enter your Discord ID.')
+        return
+      }
+
+      saveSessionBtn.disabled = true
+      saveSessionBtn.textContent = 'Signing In…'
+      localStorage.setItem(SESSION_DISCORD_ID_KEY, discordId)
+      refreshSessionHint(discordId)
+
+      await loadSelf(discordId)
+
+      saveSessionBtn.disabled = false
+      saveSessionBtn.textContent = 'Sign In'
+    })
+
+    logoutBtn.addEventListener('click', () => {
+      localStorage.removeItem(SESSION_DISCORD_ID_KEY)
+      discordInput.value = ''
+      currentUser = null
+      currentUserId = null
+      profileResult.style.display = 'none'
+      refreshSessionHint('')
+      setEmptyMessage('Session cleared. Sign in to load your profile again.')
+    })
+  } else {
+    const handleInput = el.querySelector('#handleInput')
+    const loadBtn = el.querySelector('#loadBtn')
+
+    // Enter key
+    handleInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') loadBtn.click()
+    })
+
+    loadBtn.addEventListener('click', async () => {
+      const handle = handleInput.value.trim()
+      if (!handle) return
+
+      loadBtn.disabled = true
+      loadBtn.textContent = 'Loading…'
+      const result = await loadUserProfile(() => api.profileByHandle(handle))
+      if (!result.ok && result.error?.message?.includes('404')) {
+        setEmptyMessage(`No user found for handle "${handle}".`)
+      }
       loadBtn.disabled = false
       loadBtn.textContent = 'Load Profile'
-    }
-  })
+    })
+
+    setEmptyMessage('Search for a Codeforces handle to view a profile.')
+  }
 
   // Platform tabs
   el.querySelectorAll('[data-platform]').forEach(btn => {
     btn.addEventListener('click', async () => {
-      if (!currentUserId) return
+      if (!currentUserId || !currentUser) return
       el.querySelectorAll('[data-platform]').forEach(b => b.classList.remove('active'))
       btn.classList.add('active')
       currentPlatform = btn.dataset.platform
 
       try {
-        const [user, analytics] = await Promise.all([
-          api.profileByHandle(handleInput.value.trim()),
-          api.analytics(currentUserId, currentPlatform),
-        ])
-        renderStats(el, user, analytics)
+        const analytics = await api.analytics(currentUserId, currentPlatform)
+        renderStats(el, currentUser, analytics)
         await loadChart(el, currentUserId, currentDays)
       } catch (err) {
         showToast(err.message)
