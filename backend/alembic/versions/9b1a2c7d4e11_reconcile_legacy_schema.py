@@ -5,7 +5,7 @@ Revises: 36c80f82d77c
 Create Date: 2026-04-02
 """
 
-from typing import Sequence, Union
+from typing import Any, Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
@@ -17,17 +17,17 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
-def _table_exists(inspector: sa.Inspector, table_name: str) -> bool:
+def _table_exists(inspector: Any, table_name: str) -> bool:
 	return table_name in inspector.get_table_names()
 
 
-def _column_exists(inspector: sa.Inspector, table_name: str, column_name: str) -> bool:
+def _column_exists(inspector: Any, table_name: str, column_name: str) -> bool:
 	if not _table_exists(inspector, table_name):
 		return False
 	return column_name in {col["name"] for col in inspector.get_columns(table_name)}
 
 
-def _index_exists(inspector: sa.Inspector, table_name: str, index_name: str) -> bool:
+def _index_exists(inspector: Any, table_name: str, index_name: str) -> bool:
 	if not _table_exists(inspector, table_name):
 		return False
 	return index_name in {idx["name"] for idx in inspector.get_indexes(table_name)}
