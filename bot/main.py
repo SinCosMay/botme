@@ -128,8 +128,11 @@ async def lc_company(
     difficulty: str | None = None,
 ) -> None:
     await interaction.response.defer(thinking=True)
-    embed = await lc_company_cmd.run(client, str(interaction.user.id), company, topic, difficulty)
-    await interaction.followup.send(embed=embed)
+    try:
+        embed = await lc_company_cmd.run(client, str(interaction.user.id), company, topic, difficulty)
+        await interaction.followup.send(embed=embed)
+    except BackendClientError as exc:  # pragma: no cover
+        await interaction.followup.send(f"LeetCode assign failed: {exc.message}")
 
 
 @bot.tree.command(name="lc_solved", description="Mark assigned LeetCode problem solved")
