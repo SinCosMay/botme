@@ -3,6 +3,12 @@
 Float is a Discord coding practice bot for competitive programming and interview prep.
 It combines a Discord-first command experience, a FastAPI backend, and a lightweight web dashboard to help users practice consistently and track measurable progress.
 
+## See Float in Action
+
+Register your Codeforces handle, get a challenge, verify your solve, and earn bonus XP with a follow-up answer. Float also brings company-wise LeetCode practice into Discord.
+
+https://github.com/user-attachments/assets/f52eab08-13e8-4c5f-9a0e-85a6c552da62
+
 ## What Float Does
 
 - Assigns Codeforces problems by mode: random, topic, or rating range.
